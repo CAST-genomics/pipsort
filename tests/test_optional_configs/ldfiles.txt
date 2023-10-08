@@ -1,0 +1,2 @@
+eur_small_test.ld
+afr_small_test.ld

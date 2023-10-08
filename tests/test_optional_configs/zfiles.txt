@@ -1,0 +1,2 @@
+eur_small_test_final.zscore
+afr_small_test_final.zscore
