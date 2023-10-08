@@ -54,9 +54,9 @@ CUSTOM_SO := /home/tmirmira/miniconda3/envs/env_popcorn2/lib/libblas.so
 CUSTOM_SO += /home/tmirmira/miniconda3/envs/env_popcorn2/lib/liblapack.so
 
 # Source files listed below 
-SRCS := MsCaviar.cpp 
-SRCS += MsPostCal.cpp 
-SRCS += MsUtil.cpp
+SRCS := setup.cpp 
+SRCS += post_cal.cpp 
+SRCS += util.cpp
 
 # Names of object files 
 OBJS := $(SRCS:.cpp=.o)
@@ -66,7 +66,7 @@ OBJS := $(SRCS:.cpp=.o)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INCS) ${DFLAGS} 
 
 # Name of executable
-EXECUTABLE1=MsCAVIAR
+EXECUTABLE1=PIPSORT
 
 # default target of "make" command 
 all: $(EXECUTABLE1)
@@ -76,6 +76,6 @@ $(EXECUTABLE1): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) ${DFLAGS} ${LDFLAGS} ${CUSTOM_SO} -o $@
 
 clean:
-	rm -f MsCAVIAR *.o
+	rm -f PIPSORT *.o
 
 
