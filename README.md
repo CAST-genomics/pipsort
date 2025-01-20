@@ -1,4 +1,5 @@
 Extends https://github.com/nlapier2/MsCAVIAR/
+The majority of PIPSORT development was done on a fork. We have moved the code to this new repo. For prior commit history, please see https://github.com/TaraMirmira/MsCAVIAR
 
 ### Installation
 
