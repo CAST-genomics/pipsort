@@ -12,7 +12,7 @@ make
 ```
 
 
-### Important command line options
+### Required or important command line options
 
 The **-l** and **-z** arguments, as can be seen in the tests/example/ folder, list the files with the LD matrix and Z scores for the SNPs in the locus, respectively. The file paths should be given either as absolute file paths or relative paths to the current directory.
 
@@ -22,11 +22,11 @@ The Z files should contain two tab-separated columns. The first column should be
 
 **-m** To accommodate different sets of variants across studies, PIPSORT needs a variant map. For two studies, this is a 3-column file. The first column is the variant name. The second column is the index of the variant in the first study (or -1 if it is not present in that study). The third column is the index of the variant in the second study (or -1 if it is not present). We provide helper scripts for formatting summary and statistics and constructing this map in utils/. Additionally we provide a script (`get_pipsort_inputs.sh`) that takes in two GWAS summary statistic files in PLINK format and outputs the variant map and summary statistics formatted appropriately for use by PIPSORT.
 
-**-c** controls the maximum number of causal SNPs allowed at a locus; the default is 3. 
-
 The **-n** argument specifies the population size for each study, comma-separated. Again, this should be the same number of studies and in the same order as was given by the -l and -z arguments. 
 
-The **-o** argument is simply the output name prefix for the MsCAVIAR output files.
+The **-o** argument is simply the output name prefix for the PIPSORT output files.
+
+**-c** controls the maximum number of causal SNPs allowed at a locus; the default is 3. 
 
 ### Other command line options (from MsCAVIAR)
 
