@@ -1,5 +1,5 @@
-#ifndef MUTIL_H
-#define MUTIL_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <cmath>
 #include <string>

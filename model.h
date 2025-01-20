@@ -1,5 +1,5 @@
-#ifndef MCAVIARMODEL_H
-#define MCAVIARMODEL_H
+#ifndef MODEL_H
+#define MODEL_H
 
 #include <iostream>
 #include <fstream>
@@ -14,12 +14,12 @@
 
 #include <armadillo>
 
-#include "MsPostCal.h"
+#include "postcal.h"
 
 using namespace std;
 using namespace arma;
 
-class MCaviarModel{
+class Model{
 public:
     double sharing_param;
     double rho;
@@ -31,7 +31,7 @@ public:
     vector<char> * pcausalSet;
     vector<int> * rank;
     bool histFlag;  // to out the probaility of different number of causal SNP
-    MPostCal * post;
+    PostCal * post;
     vector< vector<string> > * snpNames;
     vector<string> ldDir;
     vector<string> zDir;
@@ -54,9 +54,9 @@ public:
     vector<string> all_snp_pos;
 
     /*
-     consrtuctor for MCaviarModel
+     consrtuctor for Model
      */
-    MCaviarModel(vector<string> ldDir, vector<string> zDir, string snpMapFile, string configsFile, int num_configs, int num_groups, vector<int> sample_sizes, vector<int> num_causal, string outputFileName, const int totalCausalSNP, double sharing_param, double rho, bool histFlag, double gamma=0.01, double tau_sqr = 0.2, double sigma_g_squared = 5.2, double cutoff_threshold = 0) : totalCausalSNP(totalCausalSNP), num_of_studies(ldDir.size()) {
+    Model(vector<string> ldDir, vector<string> zDir, string snpMapFile, string configsFile, int num_configs, int num_groups, vector<int> sample_sizes, vector<int> num_causal, string outputFileName, const int totalCausalSNP, double sharing_param, double rho, bool histFlag, double gamma=0.01, double tau_sqr = 0.2, double sigma_g_squared = 5.2, double cutoff_threshold = 0) : totalCausalSNP(totalCausalSNP), num_of_studies(ldDir.size()) {
         this->histFlag = histFlag;
 	this->sharing_param = sharing_param;
         this->rho = rho;
@@ -170,12 +170,22 @@ public:
             //check for low rank
             //if(arma::rank(sigma->at(i)) < snpCount){
 	    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-            if(arma::rank(sigma->at(i)) < num_snps_all[i]){
+		    //printf("rank of study %d is %lld\n", i, arma::rank(sigma->at(i)));
+		    //printf("num snps study %d is %d\n", i, num_snps_all[i]);
+            //if(arma::rank(sigma->at(i)) < num_snps_all[i]){
+	    int min_num_snps = num_snps_all[0];
+	    for ( int num : num_snps_all ) {
+	      if ( num < min_num_snps ) {
+	        min_num_snps = num;
+	      }
+	    }
+            if(arma::rank(sigma->at(i)) < min_num_snps){
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		std::cout << "Time to check rank = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
                 haslowrank = true;
                 std::cout << "study " << i << " has low rank. Implementing low_rank method.\n";
             }
+            haslowrank = true;
             
             //makeSigmaPositiveSemiDefinite(&(sigma->at(i)), snpCount);
 	    begin = std::chrono::steady_clock::now();
@@ -197,6 +207,7 @@ public:
         }
         
         //if low rank, BIG_SIGMA = BIG_B, Stat matrix has new distribution
+	//omp_set_num_threads(1);
         if(haslowrank == true){
             //construct big B
             mat* BIG_B = new mat(num_total_snps, num_total_snps, fill::zeros);
@@ -231,7 +242,10 @@ public:
                     (*z_score)(j,0) = S_LONG_VEC[sum_msubj_until_i+j]; //msubj the j does not correspond to j in this for loop, it is just an idx
                 }
 
+		//int nT = omp_get_num_procs();
+		//omp_set_num_threads(1);
                 mat tmpS = inv(sqrt_Omega) * trans_Q;
+		//omp_set_num_threads(nT);
                 mat lowS = tmpS * (*z_score);
 
                 for(int j = 0; j < num_snps_all[i]; j++){
@@ -242,10 +256,11 @@ public:
                 delete(z_score);
             }
 
+	    //delete(BIG_SIGMA);
             *BIG_SIGMA = *BIG_B;
             delete(BIG_B);
         }
-        post = new MPostCal(BIG_SIGMA, &S_LONG_VEC, snpCount, configsFile, num_configs, num_groups, totalCausalSNP, num_causal, snpNames, sharing_param, gamma, tau_sqr, sigma_g_squared, num_of_studies, sample_sizes, num_snps_all, haslowrank, idx_to_snp_map, idx_to_union_pos_map, all_snp_pos);
+        post = new PostCal(BIG_SIGMA, &S_LONG_VEC, snpCount, configsFile, num_configs, num_groups, totalCausalSNP, num_causal, snpNames, sharing_param, gamma, tau_sqr, sigma_g_squared, num_of_studies, sample_sizes, num_snps_all, haslowrank, idx_to_snp_map, idx_to_union_pos_map, all_snp_pos);
     }
 
     /*
@@ -293,7 +308,7 @@ public:
     }
 
     // destructor
-    ~MCaviarModel() {
+    ~Model() {
         delete z_score;
         delete sigma;
         delete snpNames;

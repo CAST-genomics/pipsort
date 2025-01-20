@@ -34,10 +34,6 @@ CFLAGS += -Wno-duplicated-branches -Wrestrict
 #CFLAGS += -fsanitize=address -fno-omit-frame-pointer 
 #CFLAGS += -fsanitize=undefined 
 #CFLAGS +=  -static-libasan # for address sanitizer
-# Got following error when I put static-libasan at end of LIBS
-# ==1645146==Your application is linked against incompatible ASan runtimes.
-# Something to do with order of linking???
-#
 # Above to use address sanitizer
 
 DIC=$(PWD)
@@ -50,12 +46,12 @@ DFLAGS := -DARMA_DONT_USE_WRAPPER
 LDFLAGS += -lgslcblas
 LDFLAGS += -lgsl
 
-CUSTOM_SO := /home/tmirmira/miniconda3/envs/env_popcorn2/lib/libblas.so
-CUSTOM_SO += /home/tmirmira/miniconda3/envs/env_popcorn2/lib/liblapack.so
+CUSTOM_SO := /home/tmirmira/miniconda3/envs/pipsort3/lib/libblas.so
+CUSTOM_SO += /home/tmirmira/miniconda3/envs/pipsort3/lib/liblapack.so
 
 # Source files listed below 
-SRCS := setup.cpp 
-SRCS += post_cal.cpp 
+SRCS := pipsort.cpp 
+SRCS += postcal.cpp 
 SRCS += util.cpp
 
 # Names of object files 
