@@ -466,6 +466,9 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	vector<vector<int>> nbdzero = get_nbdzero(configure);
 	vector<vector<int>> nbdminus = get_nbdminus(configure);
 	vector<vector<int>> nbdplus = get_nbdplus(configure);
+	int num_zero = nbdzero.size();
+	int num_minus = nbdminus.size();
+	int num_plus = nbdplus.size();
 
 	vector<vector<int>> nbd;
         nbd.reserve(nbdzero.size() + nbdminus.size() + nbdplus.size());
@@ -482,7 +485,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
             std::make_move_iterator(nbdplus.begin()),
             std::make_move_iterator(nbdplus.end()));
 
-	vector<int> probs;
 
 
 	bool make_updates = true;	
@@ -490,8 +492,85 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	if (config_hashmap.find(causal_locs) != config_hashmap.end()) {
 	    make_updates = false;
         }
+	
+	double tmp_likelihood = expand_and_compute_lkl(configure, make_updates);
+	vector<double> probs(nbd.size(), 0);
+	//TODO pragma here
+	//change from for each to just for, change push_back to probs[i] = X
+	for ( int i = 0; i < nbd.size(); i++ ) {
+	   double v_lkl = expand_and_compute_lkl(v, false); //compute lkl but no update
+	   probs[i] = v_lkl;
+	}
+
+	//sampling
+
+	double weight_zero = 0.0; size_t zero_sample = nbd.size(); //nbd.size() is an invalid index
+	double weight_minus = 0.0; size_t minus_sample = nbd.size();
+	double weight_plus = 0.0; size_t plus_sample = nbd.size();
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	if ( num_zero != 0 ) {
+	    std::discrete_distribution<size_t> dist(probs.begin(), probs.begin()+num_zero);
+	    zero_sample = dist(gen);
+	    weight_zero = std::accumulate(probs.begin(), probs.begin()+num_zero, 0.0);
+	}
+	if ( num_minus != 0 ) {
+	    std::discrete_distribution<size_t> dist(probs.begin()+num_zero, probs.begin()+num_zero+num_minus);
+	    minus_sample = dist(gen);
+	    weight_minus = std::accumulate(probs.begin()+num_zero, probs.begin()+num_zero+num_minus, 0.0);
+	}
+	if ( num_zero != 0 ) {
+	    std::discrete_distribution<size_t> dist(probs.begin()+num_zero+num_minus, probs.end());
+	    plus_sample = dist(gen);
+	    weight_plus = std::accumulate(probs.begin()+num_zero+num_minus, probs.end(), 0.0);
+	}
+
+	std::discrete_distribution<size_t> dist({weight_zero, weight_minus, weight_plus});
+	size_t final_sample = dist(gen);
+	configure = nbd[final_sample];
+
+    }
+
+    omp_set_num_threads(1);
+
+    
+    for ( int i = 0; i < nP; i++ ) {
+      for ( int j = 0; j < num_of_studies; j++ ) {
+        free(thread_mem_idx[i][j]);
+        free(thread_mem_bool[i][j]);
+        free(thread_mem_bool_for_config[i][j]);
+      }
+      free(thread_mem_idx[i]);
+      free(thread_mem_bool[i]);
+      free(thread_mem_bool_for_config[i]);
+    }
+    free(thread_mem_idx);
+    free(thread_mem_bool);
+    free(thread_mem_bool_for_config);
+    
+
+    //cout << "\ncomputing likelihood of all configurations took  " << (float)(clock()-start)/CLOCKS_PER_SEC << "seconds.\n";
+
+    for(int i = 0; i <= maxCausalSNP; i++) { //TODO what is this for, do I need to change it
+        histValues[i] = exp(histValues[i]-sumLikelihood);
+    }
+    printf("num total configs = %d\n", mycount);
 
 
+    return(sumLikelihood);
+}
+
+double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates) {
+
+	int numCausal = 0;
+        vector<int> causal_locs;
+        for ( int i = 0; i < configure.size(); i++ ) {
+            if configure[i] == 1 {
+               numCausal += 1
+               causal_locs.push_back(i)
+            }
+        }
 
         if ( numCausal == 0 ) { //if no causal, just update sum likelihood, nothing else should change
                 vector<int> tempConfigure(totalSnpCount, 0);
@@ -528,7 +607,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 		   //emplace won't make a copy of causal_locs
 		   config_hashmap.emplace(causal_locs, tmp_likelihood);
 		}
-		continue;
+		return tmp_likelihood;
 	}
 
 
@@ -711,36 +790,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	//}
 	//printf("\n");
        }
-
-    }
-
-    omp_set_num_threads(1);
-
-    
-    for ( int i = 0; i < nP; i++ ) {
-      for ( int j = 0; j < num_of_studies; j++ ) {
-        free(thread_mem_idx[i][j]);
-        free(thread_mem_bool[i][j]);
-        free(thread_mem_bool_for_config[i][j]);
-      }
-      free(thread_mem_idx[i]);
-      free(thread_mem_bool[i]);
-      free(thread_mem_bool_for_config[i]);
-    }
-    free(thread_mem_idx);
-    free(thread_mem_bool);
-    free(thread_mem_bool_for_config);
-    
-
-    //cout << "\ncomputing likelihood of all configurations took  " << (float)(clock()-start)/CLOCKS_PER_SEC << "seconds.\n";
-
-    for(int i = 0; i <= maxCausalSNP; i++) { //TODO what is this for, do I need to change it
-        histValues[i] = exp(histValues[i]-sumLikelihood);
-    }
-    printf("num total configs = %d\n", mycount);
-
-
-    return(sumLikelihood);
+	return tmp_likelihood;
 }
 
 bool PostCal::checkAND(int **causal_bool_per_study_for_config, int num_of_studies, int numCausal) {
