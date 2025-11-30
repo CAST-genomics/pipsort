@@ -55,6 +55,7 @@ private:
     vector<vector<int>> idx_to_union_pos_map;
     vector<string> all_snp_pos;
     int unionSnpCount;
+    std::unordered_map<vector<int>, double, VecHash> config_hashmap;
 
     //addition in log space
     double addlogSpace(double a, double b) {
@@ -159,6 +160,25 @@ public:
 	delete [] notSharedLL;
     }
 
+    // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
+// not sure about the noexcept
+struct VecHash {
+    std::size_t operator()(std::vector<int> const& vec) const noexcept {
+        std::size_t seed = vec.size();
+
+        for (int v : vec) {
+            uint32_t x = static_cast<uint32_t>(v);
+
+            x = ((x >> 16) ^ x) * 0x45d9f3bu;
+            x = ((x >> 16) ^ x) * 0x45d9f3bu;
+            x = (x >> 16) ^ x;
+            seed ^= std::size_t(x) + 0x9e3779b9u + (seed << 6) + (seed >> 2);
+        }
+
+        return seed;
+    }
+};
+
     /*
      * Calculate prior probability of given configuration vector
      * */
@@ -193,6 +213,10 @@ public:
      find the next binary configuration based on the previous config and size of vector
      */
     int nextBinary(vector<int>& data, int size) ;
+
+    vector<vector<int>> get_nbdplus(vector<int> curr_config);
+    vector<vector<int>> get_nbdminus(vector<int> curr_config);
+    vector<vector<int>> get_nbdzero(vector<int> curr_config)
 
     /*
      find the total likelihood given the z_score and sigma_g_squared
