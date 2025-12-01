@@ -485,12 +485,17 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 
 	bool make_updates = true;	
-	//check if we have already computed likelihood for this config
-	if (config_hashmap.find(causal_locs) != config_hashmap.end()) {
+	//check if we have already explored this config
+	if (explored_set.find(causal_locs) != explored_set.end()) {
 	    make_updates = false;
         }
 	
 	double tmp_likelihood = expand_and_compute_lkl(configure, make_updates);
+
+	if ( make_updates ) {
+           explored_set.insert(causal_locs);
+	}
+
 	vector<double> probs(nbd.size(), 0);
 	//TODO pragma here
 	//change from for each to just for, change push_back to probs[i] = X
@@ -606,7 +611,7 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
                 //#pragma omp critical
 		//TODO where to put the pragma
 		if ( make_updates ) { 
-                   sumLikelihood = addlogSpace(sumLikelihood, tmp_likelihood);
+                   sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
 		   //emplace won't make a copy of causal_locs
 		   config_hashmap.emplace(causal_locs, tmp_likelihood);
 		}
@@ -675,6 +680,7 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	total_num_additional_configs = (int)(pow(2, total_num_additional_configs) - 1);
 //	printf("num additional = %d\n", total_num_additional_configs);
 
+	double max_lkl = 0.0;
 
 	for ( int i = 0; i < total_num_additional_configs; i++ ) {
 	  //int pid = omp_get_thread_num();
@@ -712,17 +718,12 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	  if (!checkOR(causal_bool_per_study_for_config, num_of_studies, numCausal)) {
             continue;
 	  }
-	  //if (!checkAND(causal_bool_per_study_for_config, num_of_studies, numCausal)) {
-	  //  continue;
-	  //}
 	  //printf("next config to eval\n");
 	  //printVec(nextConfigure);
           double tmp_likelihood = 0;
 	  double just_ll = 0;
 	  double just_prior = 0;
           mat sigmaC = construct_diagC(nextConfigure, numCausal, causal_idx_per_study, causal_bool_per_study_for_config);
-          //printf("sigma C\n");
-	  //sigmaC.print(std::cout);
 
           if ( haslowrank == true ) {
              //mycount += 1;
@@ -736,14 +737,18 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
              just_prior = log_prior(nextConfigure, numCausal, causal_bool_per_study_for_config);
              tmp_likelihood = just_ll + just_prior;
              }
+          
+	  //update max_lkl
+	  if (abs(tmp_likelihood) > abs(max_lkl) ) {
+             max_lkl = tmp_likelihood;
+	  }
         
          #pragma omp critical
-         sumLikelihood = addlogSpace(sumLikelihood, tmp_likelihood);
-	 //printf("sumLikelihood is %f\n", sumLikelihood);
- 
-	 //printf("likelihood is %f\n", tmp_likelihood);
-	 //printf("exp likelihood is %f\n", exp(tmp_likelihood));
+	 if ( make_updates ) {
+            sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
+	 }
 
+         if ( make_updates ) {
          for ( int w = 0; w < num_of_studies; w++ ) {
 	   bool allZero = true;
            for ( int v = 0; v < numCausal; v++ ) {
@@ -753,11 +758,9 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	     }
 	   }
 	   if ( allZero ) {
-		   //printf("no causal in study %d\n", w);
              noCausal[w] = addlogSpace(noCausal[w], tmp_likelihood);
 	   }
 	 }
-
 
 	 for ( int g = 0; g < numCausal; g++ ) {
            bool sharedCausal = true;
@@ -767,10 +770,8 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	     }
 	   }
 	   if ( sharedCausal ) {
-             //printf("shared causal\n");
              sharedPips[causal_locs[g]] =  addlogSpace(sharedPips[causal_locs[g]], tmp_likelihood);
 	     sharedLL[causal_locs[g]] = addlogSpace(sharedLL[causal_locs[g]], just_ll);
-	     //printf("shared pip = %f", sharedPips[causal_locs[g]]);
 	   } else {
              notSharedLL[causal_locs[g]] = addlogSpace(notSharedLL[causal_locs[g]], just_ll);
 	   }
@@ -780,20 +781,11 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
             //for(int k = 0; k < num_of_studies; k++){
                 #pragma omp critical
                 postValues[f] = addlogSpace(postValues[f], tmp_likelihood * nextConfigure[f]);
-		//if ( nextConfigure[f] == 1 ) {
-                  //printf("updating index %d\n", f);
-		  //printf("added in log space %f\n", tmp_likelihood);
-		  //printf("post value for %d is %f\n", f, postValues[f]);
-		//}
-                //}
          }        
-	//printf("post values\n");
-	//for ( int f = 0; f < totalSnpCount; f++) {
-        //  printf("%f ", postValues[f]);
-	//}
-	//printf("\n");
+	 }
        }
-	return tmp_likelihood;
+	config_hashmap[causal_locs] = max_lkl;
+	return max_lkl;
 }
 
 bool PostCal::checkAND(int **causal_bool_per_study_for_config, int num_of_studies, int numCausal) {

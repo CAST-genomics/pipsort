@@ -85,8 +85,9 @@ int main( int argc, char *argv[]  ){
     string configsFile = "";
     int num_groups = 0; //num columns in configsFile
     int num_configs = 0; //num rows in configsFile
+    bool do_sss = false;
 
-    while ((oc = getopt(argc, argv, "vhl:o:z:m:p:r:c:k:g:f:t:s:n:a:b:d:e:x")) != -1) {
+    while ((oc = getopt(argc, argv, "vhl:o:z:m:p:r:c:k:g:f:t:s:n:a:b:d:e:x:q")) != -1) {
 	    //TODO P3 last char in this colon separated list does not work, optarg comes in as null. -x is dummy flag. Should it be :x: (colon at end)?
 	if ( (optarg == NULL) || (*optarg == '\0') ) {
           printf("optarg is NULL\n");
@@ -164,6 +165,8 @@ int main( int argc, char *argv[]  ){
             case 's':
                 sigma_g_squared = atof(optarg);
                 break;
+	    case 'q':
+		do_sss = true;
             case ':':
             case '?':
             case 'a':
@@ -212,7 +215,7 @@ int main( int argc, char *argv[]  ){
     }  
     omp_set_num_threads(1);
 
-    Model mpipsort(ldDir, zDir, snpMapFile, configsFile, num_configs, num_groups, sample_sizes, num_causal, outputFileName, finalTotalCausalSNP, sharing_param, rho, histFlag, gamma, tau_sqr, sigma_g_squared, cutoff_threshold);
+    Model mpipsort(ldDir, zDir, snpMapFile, configsFile, num_configs, num_groups, do_sss, sample_sizes, num_causal, outputFileName, finalTotalCausalSNP, sharing_param, rho, histFlag, gamma, tau_sqr, sigma_g_squared, cutoff_threshold);
     mpipsort.run();
     mpipsort.finishUp();
     return 0;

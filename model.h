@@ -52,11 +52,12 @@ public:
     vector<vector<int>> idx_to_snp_map; //union position to study level position
     vector<vector<int>> idx_to_union_pos_map; //study level position to union position
     vector<string> all_snp_pos;
+    bool do_sss;
 
     /*
      consrtuctor for Model
      */
-    Model(vector<string> ldDir, vector<string> zDir, string snpMapFile, string configsFile, int num_configs, int num_groups, vector<int> sample_sizes, vector<int> num_causal, string outputFileName, const int totalCausalSNP, double sharing_param, double rho, bool histFlag, double gamma=0.01, double tau_sqr = 0.2, double sigma_g_squared = 5.2, double cutoff_threshold = 0) : totalCausalSNP(totalCausalSNP), num_of_studies(ldDir.size()) {
+    Model(vector<string> ldDir, vector<string> zDir, string snpMapFile, string configsFile, int num_configs, int num_groups, bool do_sss, vector<int> sample_sizes, vector<int> num_causal, string outputFileName, const int totalCausalSNP, double sharing_param, double rho, bool histFlag, double gamma=0.01, double tau_sqr = 0.2, double sigma_g_squared = 5.2, double cutoff_threshold = 0) : totalCausalSNP(totalCausalSNP), num_of_studies(ldDir.size()) {
         this->histFlag = histFlag;
 	this->sharing_param = sharing_param;
         this->rho = rho;
@@ -67,6 +68,7 @@ public:
 	this->configsFile = configsFile;
 	this->num_configs = num_configs;
 	this->num_groups = num_groups;
+	this->do_sss = do_sss;
         this->outputFileName = outputFileName;
 //        this->totalCausalSNP = totalCausalSNP;
         this->tau_sqr = tau_sqr;
@@ -260,7 +262,7 @@ public:
             *BIG_SIGMA = *BIG_B;
             delete(BIG_B);
         }
-        post = new PostCal(BIG_SIGMA, &S_LONG_VEC, snpCount, configsFile, num_configs, num_groups, totalCausalSNP, num_causal, snpNames, sharing_param, gamma, tau_sqr, sigma_g_squared, num_of_studies, sample_sizes, num_snps_all, haslowrank, idx_to_snp_map, idx_to_union_pos_map, all_snp_pos);
+        post = new PostCal(BIG_SIGMA, &S_LONG_VEC, snpCount, configsFile, num_configs, num_groups, do_sss, totalCausalSNP, num_causal, snpNames, sharing_param, gamma, tau_sqr, sigma_g_squared, num_of_studies, sample_sizes, num_snps_all, haslowrank, idx_to_snp_map, idx_to_union_pos_map, all_snp_pos);
     }
 
     /*

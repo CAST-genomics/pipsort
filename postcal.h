@@ -33,6 +33,7 @@ private:
     string configsFile; //optional configs file, will be empty string if not provided
     int num_configs;
     int num_groups;
+    bool do_sss;
     const int maxCausalSNP;    //maximum number of causal variants to consider in a locus
     double sigmaDet;    //determinant of matrix
 
@@ -42,6 +43,7 @@ private:
     double s_squared;    //sigma_g^2 (heritability)
     const int num_of_studies;
     bool haslowrank = false;
+    double sss_sum_lkl; //instance variable for sss total likelihood
 
     mat sigmaMatrix;
     mat invSigmaMatrix;
@@ -56,6 +58,7 @@ private:
     vector<string> all_snp_pos;
     int unionSnpCount;
     std::unordered_map<vector<int>, double, VecHash> config_hashmap;
+    std::unordered_set<vector<int>, VecHash> explored_set;
 
     //addition in log space
     double addlogSpace(double a, double b) {
@@ -74,13 +77,14 @@ public:
     /*
      constructor
     */
-    PostCal(mat * BIG_SIGMA, vector<double> * S_LONG_VEC, int snpCount, string configsFile, int num_configs, int num_groups, const int MAX_causal, vector<int> num_causal, vector<vector<string> > * SNP_NAME, double sharing_param, double gamma, double t_squared, double s_squared, const int num_of_studies, vector<int> sample_sizes, vector<int> num_snps_all, bool lowrank, vector<vector<int>> idx_to_snp_map, vector<vector<int>> idx_to_union_pos_map, vector<string> all_snp_pos) : maxCausalSNP(MAX_causal),num_of_studies(num_of_studies){
+    PostCal(mat * BIG_SIGMA, vector<double> * S_LONG_VEC, int snpCount, string configsFile, int num_configs, int num_groups, bool do_sss, const int MAX_causal, vector<int> num_causal, vector<vector<string> > * SNP_NAME, double sharing_param, double gamma, double t_squared, double s_squared, const int num_of_studies, vector<int> sample_sizes, vector<int> num_snps_all, bool lowrank, vector<vector<int>> idx_to_snp_map, vector<vector<int>> idx_to_union_pos_map, vector<string> all_snp_pos) : maxCausalSNP(MAX_causal),num_of_studies(num_of_studies){
         this->gamma = gamma;
         this->SNP_NAME = SNP_NAME;
         this-> snpCount = snpCount;
 	this->configsFile = configsFile;
 	this->num_configs = num_configs;
 	this->num_groups = num_groups;
+	this->do_sss = do_sss;
 	this-> totalSnpCount = std::accumulate(num_snps_all.begin(), num_snps_all.end(), 0);
         //this-> maxCausalSNP = MAX_causal;
         //this-> postValues = new double [snpCount];
@@ -95,6 +99,7 @@ public:
         for(int i= 0; i <= maxCausalSNP;i++)
             this->histValues[i] = 0;
         this-> totalLikeLihoodLOG = 0;
+	this-> sss_sum_lkl = 0;
 	this-> sharing_param = sharing_param;
         this-> t_squared = t_squared;
         this-> s_squared = s_squared;
@@ -223,6 +228,8 @@ struct VecHash {
      */
     double computeTotalLikelihood(vector<double> * stat, double sigma_g_squared) ;
     double computeTotalLikelihoodGivenConfigs(vector<double> * stat, double sigma_g_squared) ;
+    double sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared); 
+    double expand_and_compute_lkl(vector<int> configure, bool make_updates);
 
     bool checkOR(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);
     bool checkAND(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);
