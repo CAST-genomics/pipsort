@@ -10,6 +10,7 @@
 #include <string.h>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <armadillo>
 
@@ -17,6 +18,25 @@ using namespace std;
 using namespace arma;
 
 void printGSLPrint(mat A, int row, int col);
+//
+    // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
+// not sure about the noexcept
+struct VecHash {
+    std::size_t operator()(std::vector<int> const& vec) const noexcept {
+        std::size_t seed = vec.size();
+
+        for (int v : vec) {
+            uint32_t x = static_cast<uint32_t>(v);
+
+            x = ((x >> 16) ^ x) * 0x45d9f3bu;
+            x = ((x >> 16) ^ x) * 0x45d9f3bu;
+            x = (x >> 16) ^ x;
+            seed ^= std::size_t(x) + 0x9e3779b9u + (seed << 6) + (seed >> 2);
+        }
+
+        return seed;
+    }
+};
 
 class PostCal{
 private:
@@ -165,24 +185,6 @@ public:
 	delete [] notSharedLL;
     }
 
-    // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
-// not sure about the noexcept
-struct VecHash {
-    std::size_t operator()(std::vector<int> const& vec) const noexcept {
-        std::size_t seed = vec.size();
-
-        for (int v : vec) {
-            uint32_t x = static_cast<uint32_t>(v);
-
-            x = ((x >> 16) ^ x) * 0x45d9f3bu;
-            x = ((x >> 16) ^ x) * 0x45d9f3bu;
-            x = (x >> 16) ^ x;
-            seed ^= std::size_t(x) + 0x9e3779b9u + (seed << 6) + (seed >> 2);
-        }
-
-        return seed;
-    }
-};
 
     /*
      * Calculate prior probability of given configuration vector
@@ -221,7 +223,7 @@ struct VecHash {
 
     vector<vector<int>> get_nbdplus(vector<int> curr_config);
     vector<vector<int>> get_nbdminus(vector<int> curr_config);
-    vector<vector<int>> get_nbdzero(vector<int> curr_config)
+    vector<vector<int>> get_nbdzero(vector<int> curr_config);
 
     /*
      find the total likelihood given the z_score and sigma_g_squared

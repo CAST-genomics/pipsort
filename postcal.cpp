@@ -1132,7 +1132,7 @@ vector<char> PostCal::findOptimalSetGreedy(vector<double> * stat, double sigma_g
     if (configsFile != "") {
       totalLikeLihoodLOG = computeTotalLikelihoodGivenConfigs(stat, sigma_g_squared);
     } else if (do_sss) {
-	totalLikeLihoodLOG = sss_computeTotalLikelihood(state, sigma_g_squared);
+	totalLikeLihoodLOG = sss_computeTotalLikelihood(stat, sigma_g_squared);
     } else {
       totalLikeLihoodLOG = computeTotalLikelihood(stat, sigma_g_squared);
     }

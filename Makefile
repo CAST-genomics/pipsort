@@ -52,6 +52,7 @@ CUSTOM_SO += /home/tmirmira/miniconda3/envs/pipsort3/lib/liblapack.so
 # Source files listed below 
 SRCS := pipsort.cpp 
 SRCS += postcal.cpp 
+SRCS += sss_postcal.cpp 
 SRCS += util.cpp
 
 # Names of object files 
