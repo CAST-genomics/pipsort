@@ -231,7 +231,7 @@ public:
     double computeTotalLikelihood(vector<double> * stat, double sigma_g_squared) ;
     double computeTotalLikelihoodGivenConfigs(vector<double> * stat, double sigma_g_squared) ;
     double sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared); 
-    double expand_and_compute_lkl(vector<int> configure, bool make_updates);
+    double expand_and_compute_lkl(vector<int> configure, bool make_updates, vector<double> * stat, double sigma_g_squared);
 
     bool checkOR(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);
     bool checkAND(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);

@@ -113,9 +113,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     //clock_t start = clock();
     //TODO initialized as this for now
     vector<int> configure(unionSnpCount, 0);
-    int num;
 
-    int curr_iter = 0;
 
 
 /*
@@ -137,22 +135,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     
     int nP = omp_get_num_procs();
-    printf("num procs = %d\n", nP);
-    printf("max num procs = %d\n", omp_get_max_threads());
-    printf("num threads = %d\n", omp_get_num_threads());
-    int*** thread_mem_idx = (int***)malloc(nP * sizeof(int**));
-    int*** thread_mem_bool = (int***)malloc(nP * sizeof(int**));
-    int*** thread_mem_bool_for_config = (int***)malloc(nP * sizeof(int**));
-    for ( int b = 0; b < nP; b++ ) {
-      thread_mem_idx[b] = (int**)malloc(num_of_studies * sizeof(int*));
-      thread_mem_bool[b] = (int**)malloc(num_of_studies * sizeof(int*));
-      thread_mem_bool_for_config[b] = (int**)malloc(num_of_studies * sizeof(int*));
-      for ( int q = 0; q < num_of_studies; q++ ) {
-        thread_mem_idx[b][q] = (int*)malloc(3 * sizeof(int));
-        thread_mem_bool[b][q] = (int*)malloc(3 * sizeof(int));
-        thread_mem_bool_for_config[b][q] = (int*)malloc(3 * sizeof(int));
-      }
-    }
     
     omp_set_num_threads(nP);
 
@@ -203,7 +185,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	    make_updates = false;
         }
 	
-	double tmp_likelihood = expand_and_compute_lkl(configure, make_updates);
+	double tmp_likelihood = expand_and_compute_lkl(configure, make_updates, stat, sigma_g_squared);
 
 	if ( make_updates ) {
            explored_set.insert(causal_locs);
@@ -214,7 +196,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	//change from for each to just for, change push_back to probs[i] = X
 	for ( int i = 0; i < nbd.size(); i++ ) {
 	   vector<int> v = nbd[i];
-	   double v_lkl = expand_and_compute_lkl(v, false); //compute lkl but no update
+	   double v_lkl = expand_and_compute_lkl(v, false, stat, sigma_g_squared); //compute lkl but no update
 	   probs[i] = v_lkl;
 	}
 
@@ -264,21 +246,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     omp_set_num_threads(1);
 
     
-    for ( int i = 0; i < nP; i++ ) {
-      for ( int j = 0; j < num_of_studies; j++ ) {
-        free(thread_mem_idx[i][j]);
-        free(thread_mem_bool[i][j]);
-        free(thread_mem_bool_for_config[i][j]);
-      }
-      free(thread_mem_idx[i]);
-      free(thread_mem_bool[i]);
-      free(thread_mem_bool_for_config[i]);
-    }
-    free(thread_mem_idx);
-    free(thread_mem_bool);
-    free(thread_mem_bool_for_config);
-    
-
     //cout << "\ncomputing likelihood of all configurations took  " << (float)(clock()-start)/CLOCKS_PER_SEC << "seconds.\n";
 
     for(int i = 0; i <= maxCausalSNP; i++) { //TODO what is this for, do I need to change it
@@ -289,7 +256,8 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     return(sumLikelihood);
 }
 
-double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates) {
+
+double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates, vector<double> * stat, double sigma_g_squared) {
 
 	int numCausal = 0;
         vector<int> causal_locs;
@@ -333,8 +301,8 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 		   }
 		}
 
-                //#pragma omp critical
 		//TODO where to put the pragma
+                #pragma omp critical
 		if ( make_updates ) { 
                    sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
 		   //emplace won't make a copy of causal_locs
@@ -348,20 +316,17 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	//printf("total snp count is: %d\n", totalSnpCount);
         vector<int> startConfigure(totalSnpCount, 0);
 
-	int pid = omp_get_thread_num();
-	if ((pid < 0) || (pid >= nP)) {
-          cout << "Invalid PID\n" << endl;
-          exit(1); // terminate with error
-        }
 
-
-	int** causal_idx_per_study = thread_mem_idx[pid];
-	int** causal_bool_per_study = thread_mem_bool[pid];
-	for ( int i = 0; i < num_of_studies; i++ ) {
-	  memset(causal_idx_per_study[i], 0, 3 * sizeof(int));
-	  memset(causal_bool_per_study[i], 0, 3 * sizeof(int));
-	  //memset(causal_bool_per_study_for_config[i], 0, 3 * sizeof(int));
+	int** causal_idx_per_study = new int*[num_of_studies];
+	int** causal_bool_per_study = new int*[num_of_studies];
+	int** causal_bool_per_study_for_config = new int*[num_of_studies];
+	for (int i = 0; i < num_of_studies; i++) {
+    		causal_idx_per_study[i] = new int[numCausal]();   // zero-initialize
+    		causal_bool_per_study[i] = new int[numCausal]();   // zero-initialize
+    		causal_bool_per_study_for_config[i] = new int[numCausal]();   // zero-initialize
 	}
+
+
 
 	for ( int i = 0; i < num_of_studies; i++ ) {
             for ( int j = 0; j < numCausal; j++ ) {
@@ -410,9 +375,9 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
 	for ( int i = 0; i < total_num_additional_configs; i++ ) {
 	  //int pid = omp_get_thread_num();
 	  //if ( ( pid < 0 ) || ( pid >= nP ) ) { printf("BAD PID\n"); }
-	  int **causal_bool_per_study_for_config = thread_mem_bool_for_config[pid];
 	  for ( int j = 0; j < num_of_studies; j++ ) {
-	    memset(causal_bool_per_study_for_config[j], 0, 3 * sizeof(int));
+             // std::fill(causal_bool_per_study_for_config[i], causal_bool_per_study_for_config[i] + numCausal, 0); <-- might be safer?
+	    memset(causal_bool_per_study_for_config[j], 0, numCausal * sizeof(int));
 	  }
 
 	  int bmask = i+1;
@@ -509,7 +474,18 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates)
          }        
 	 }
        }
+	#pragma omp critical
 	config_hashmap[causal_locs] = max_lkl;
+
+	for (int i = 0; i < num_of_studies; i++) {
+    		delete[] causal_idx_per_study[i];
+    		delete[] causal_bool_per_study[i];
+    		delete[] causal_bool_per_study_for_config[i];
+	}
+	delete[] causal_idx_per_study;
+	delete[] causal_bool_per_study;
+	delete[] causal_bool_per_study_for_config;
+
 	return max_lkl;
 }
 
