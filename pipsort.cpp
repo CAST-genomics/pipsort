@@ -85,13 +85,13 @@ int main( int argc, char *argv[]  ){
     string configsFile = "";
     int num_groups = 0; //num columns in configsFile
     int num_configs = 0; //num rows in configsFile
-    bool do_sss = false;
+    int sss_flag = 0;
 
-    while ((oc = getopt(argc, argv, "vhl:o:z:m:p:r:c:k:g:f:t:s:n:a:b:d:e:x:q")) != -1) {
+    while ((oc = getopt(argc, argv, "vhl:o:z:m:p:r:c:k:g:f:t:s:n:a:b:d:e:q:x")) != -1) {
 	    //TODO P3 last char in this colon separated list does not work, optarg comes in as null. -x is dummy flag. Should it be :x: (colon at end)?
 	if ( (optarg == NULL) || (*optarg == '\0') ) {
-          printf("optarg is NULL\n");
-	  exit(1);
+           printf("optarg is NULL\n");
+	   exit(1);
 	}
         switch (oc) {
             case 'v':
@@ -166,7 +166,8 @@ int main( int argc, char *argv[]  ){
                 sigma_g_squared = atof(optarg);
                 break;
 	    case 'q':
-		do_sss = true;
+		sss_flag = stoi(optarg);
+		break;
             case ':':
             case '?':
             case 'a':
@@ -193,6 +194,11 @@ int main( int argc, char *argv[]  ){
       if (num_groups <= 0) {
         cout << "Number of groups must be greater than 0" << endl;
       }
+    }
+
+    bool do_sss = false;
+    if ( sss_flag == 1 ) {
+       do_sss = true;
     }
 
     vector<string> ldDir = read_dir(ldFile);

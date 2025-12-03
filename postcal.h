@@ -77,7 +77,7 @@ private:
     vector<vector<int>> idx_to_union_pos_map;
     vector<string> all_snp_pos;
     int unionSnpCount;
-    std::unordered_map<vector<int>, double, VecHash> config_hashmap;
+    //std::unordered_map<vector<int>, double, VecHash> config_hashmap;
     std::unordered_set<vector<int>, VecHash> explored_set;
 
     //addition in log space

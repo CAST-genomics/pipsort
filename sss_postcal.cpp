@@ -133,6 +133,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
  */
 
 
+    std::mt19937 gen(12345); //deterministic
     
     int nP = omp_get_num_procs();
     
@@ -140,8 +141,10 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     //TODO move the pragma somewhere else
     //#pragma omp parallel for schedule(static,chunksize) private(configure,num)
-    int total_iteration = 10; //TODO for now
+    int total_iteration = 1000; //TODO for now
+    int ran_for = 0;
     for(int iter = 0; iter < total_iteration; iter++) {
+	    ran_for = iter;
 
 	int numCausal = 0;
 	vector<int> causal_locs;
@@ -208,7 +211,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 	//std::random_device rd; // random
 	//std::mt19937 gen(rd()); // random
-	std::mt19937 gen(12345); //deterministic
 	if ( num_zero != 0 ) {
 	    std::discrete_distribution<size_t> dist(probs.begin(), probs.begin()+num_zero);
 	    zero_sample = dist(gen);
@@ -219,7 +221,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	    minus_sample = dist(gen);
 	    weight_minus = std::accumulate(probs.begin()+num_zero, probs.begin()+num_zero+num_minus, 0.0);
 	}
-	if ( num_zero != 0 ) {
+	if ( num_plus != 0 ) {
 	    std::discrete_distribution<size_t> dist(probs.begin()+num_zero+num_minus, probs.end());
 	    plus_sample = dist(gen);
 	    weight_plus = std::accumulate(probs.begin()+num_zero+num_minus, probs.end(), 0.0);
@@ -239,9 +241,14 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
                 final_idx = plus_sample + num_zero + num_minus;
                 break;
         }
-	configure = nbd[final_idx];
+	vector<int> next_causal_locs = nbd[final_idx];
+	std::fill(configure.begin(), configure.end(), 0);
+	for ( int causal_idx : next_causal_locs ) {
+            configure[causal_idx] = 1;
+	}
 
     }
+    printf("ran for %d\n", ran_for);
 
     omp_set_num_threads(1);
 
@@ -253,7 +260,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     }
 
 
-    return(sumLikelihood);
+    return(sss_sum_lkl);
 }
 
 
@@ -268,10 +275,10 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
             }
         }
 
-	auto it = config_hashmap.find(causal_locs);
+	/*auto it = config_hashmap.find(causal_locs);
 	if (it != config_hashmap.end()) {
     	    return it->second;  // access the double value associated with the key
-	}
+	}*/
 
         if ( numCausal == 0 ) { //if no causal, just update sum likelihood, nothing else should change
                 vector<int> tempConfigure(totalSnpCount, 0);
@@ -306,7 +313,7 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
 		if ( make_updates ) { 
                    sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
 		   //emplace won't make a copy of causal_locs
-		   config_hashmap.emplace(causal_locs, tmp_likelihood);
+		   //config_hashmap.emplace(causal_locs, tmp_likelihood);
 		}
 		return tmp_likelihood;
 	}
@@ -448,6 +455,7 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
 	     }
 	   }
 	   if ( allZero ) {
+                #pragma omp critical
              noCausal[w] = addlogSpace(noCausal[w], tmp_likelihood);
 	   }
 	 }
@@ -460,9 +468,11 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
 	     }
 	   }
 	   if ( sharedCausal ) {
+                #pragma omp critical
              sharedPips[causal_locs[g]] =  addlogSpace(sharedPips[causal_locs[g]], tmp_likelihood);
 	     sharedLL[causal_locs[g]] = addlogSpace(sharedLL[causal_locs[g]], just_ll);
 	   } else {
+                #pragma omp critical
              notSharedLL[causal_locs[g]] = addlogSpace(notSharedLL[causal_locs[g]], just_ll);
 	   }
 	 }
@@ -474,8 +484,8 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
          }        
 	 }
        }
-	#pragma omp critical
-	config_hashmap[causal_locs] = max_lkl;
+	//#pragma omp critical
+	//config_hashmap[causal_locs] = max_lkl;
 
 	for (int i = 0; i < num_of_studies; i++) {
     		delete[] causal_idx_per_study[i];
