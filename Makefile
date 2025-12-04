@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS := -O3
-CFLAGS := -g -O0
+#CFLAGS := -g -O0
 
 CFLAGS += -std=c++11 
 CFLAGS += -fopenmp

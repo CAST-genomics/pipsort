@@ -27,6 +27,9 @@ vector<vector<int>> PostCal::get_nbdplus(vector<int> curr_config) {
            curr_causal_locs.push_back(i);
 	}
     }
+    if ( curr_num_causal >= 10 ) {
+       return plusone_configs; //going to cap at max 10 causal variants
+    }
     int num_plus_configs = curr_config.size() - curr_num_causal;
     for ( int i = 0; i < curr_config.size(); i++ ) {
       if ( curr_config[i]  == 0 ) {
@@ -138,13 +141,13 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     int nP = omp_get_num_procs();
     
     omp_set_num_threads(nP);
+    printf("num threads is %d\n", nP);
 
     //TODO move the pragma somewhere else
     //#pragma omp parallel for schedule(static,chunksize) private(configure,num)
-    int total_iteration = 1000; //TODO for now
-    int ran_for = 0;
+    int total_iteration = 3000; //TODO for now
+    #pragma omp parallel for
     for(int iter = 0; iter < total_iteration; iter++) {
-	    ran_for = iter;
 
 	int numCausal = 0;
 	vector<int> causal_locs;
@@ -248,7 +251,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	}
 
     }
-    printf("ran for %d\n", ran_for);
 
     omp_set_num_threads(1);
 
