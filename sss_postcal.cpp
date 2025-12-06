@@ -115,7 +115,8 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     //clock_t start = clock();
     //TODO initialized as this for now
-    vector<int> configure(unionSnpCount, 0);
+    //vector<int> configure(unionSnpCount, 0);
+    vector<int> causal_locs;
 
 
 
@@ -139,31 +140,23 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     std::mt19937 gen(12345); //deterministic
     
     int nP = omp_get_num_procs();
+    nP = 1;
+    vector<int> thread_info(2, 0);
     
     omp_set_num_threads(nP);
-    printf("num threads is %d\n", nP);
+    printf("num threads is %d\n", nP); 
+    int num_expansions = 0;
 
-    //TODO move the pragma somewhere else
-    //#pragma omp parallel for schedule(static,chunksize) private(configure,num)
-    int total_iteration = 3000; //TODO for now
-    #pragma omp parallel for
+    std::chrono::microseconds total_time{0};
+
+    int total_iteration = 10; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
 
-	int numCausal = 0;
-	vector<int> causal_locs;
-    	for ( int i = 0; i < configure.size(); i++ ) {
-            if ( configure[i] == 1 ) {
-               numCausal += 1;
-               causal_locs.push_back(i);
-            }
-        }
-	if ( numCausal == 0 ) {
-            causal_locs.push_back(static_cast<int>(configure.size())); //repr for all zeros config
-	}
+	int numCausal = causal_locs.size();
 
-	vector<vector<int>> nbdzero = get_nbdzero(configure);
-	vector<vector<int>> nbdminus = get_nbdminus(configure);
-	vector<vector<int>> nbdplus = get_nbdplus(configure);
+	vector<vector<int>> nbdzero = get_nbdzero(causal_locs);
+	vector<vector<int>> nbdminus = get_nbdminus(causal_locs);
+	vector<vector<int>> nbdplus = get_nbdplus(causal_locs);
 	int num_zero = nbdzero.size();
 	int num_minus = nbdminus.size();
 	int num_plus = nbdplus.size();
@@ -191,20 +184,30 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	    make_updates = false;
         }
 	
-	double tmp_likelihood = expand_and_compute_lkl(configure, make_updates, stat, sigma_g_squared);
+	int num_expansions_for_curr = 0;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+	double tmp_likelihood = expand_and_compute_lkl(causal_locs, make_updates, stat, sigma_g_squared, &num_expansions_for_curr);
+	__atomic_add_fetch(&num_expansions, num_expansions_for_curr, 0);
 
 	if ( make_updates ) {
            explored_set.insert(causal_locs);
 	}
 
 	vector<double> probs(nbd.size(), 0);
-	//TODO pragma here
-	//change from for each to just for, change push_back to probs[i] = X
+	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
+        #pragma omp parallel for
 	for ( int i = 0; i < nbd.size(); i++ ) {
+	   int tnum = omp_get_thread_num();
+	   thread_info[tnum] += 1;
 	   vector<int> v = nbd[i];
-	   double v_lkl = expand_and_compute_lkl(v, false, stat, sigma_g_squared); //compute lkl but no update
+	   int l_num_expansions = 0;
+	   double v_lkl = expand_and_compute_lkl(v, false, stat, sigma_g_squared, &l_num_expansions); //compute lkl but no update
 	   probs[i] = v_lkl;
+	   __atomic_add_fetch(&num_expansions, l_num_expansions, 0); //TODO
+	   printf("num expansions for iter=%d, i=%d is %d\n",iter, i, l_num_expansions);
 	}
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+     total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
 	//sampling
 
@@ -244,21 +247,24 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
                 final_idx = plus_sample + num_zero + num_minus;
                 break;
         }
-	vector<int> next_causal_locs = nbd[final_idx];
-	std::fill(configure.begin(), configure.end(), 0);
-	for ( int causal_idx : next_causal_locs ) {
-            configure[causal_idx] = 1;
-	}
+
+	causal_locs = nbd[final_idx];
 
     }
 
     omp_set_num_threads(1);
 
+    std::cout << "Total time = " << total_time.count() << " µs\n";
     
     //cout << "\ncomputing likelihood of all configurations took  " << (float)(clock()-start)/CLOCKS_PER_SEC << "seconds.\n";
 
     for(int i = 0; i <= maxCausalSNP; i++) { //TODO what is this for, do I need to change it
         histValues[i] = exp(histValues[i]-sumLikelihood);
+    }
+    
+    printf("explored %d configs\n", num_expansions);
+    for ( int i = 0; i < thread_info.size(); i++ ) {
+        printf("thread %d did %d\n", i, thread_info[i]);
     }
 
 
@@ -266,16 +272,24 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 }
 
 
-double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates, vector<double> * stat, double sigma_g_squared) {
+double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_updates, vector<double> * stat, double sigma_g_squared, int * l_num_expansions) {
+
+	vector<int> configure(unionSnpCount, 0);
+	
+	int num_expansions = 0;
 
 	int numCausal = 0;
-        vector<int> causal_locs;
-        for ( int i = 0; i < configure.size(); i++ ) {
-            if ( configure[i] == 1 ) {
+	if ( causal_locs.size() == 1 ) {
+           if ( causal_locs[0] != configure.size() ) {
+              configure[causal_locs[0]] = 1;   
+	   } //else it is the representation of the zero vector
+	} else {
+        for ( int i = 0; i < causal_locs.size(); i++ ) {
+            if ( configure[causal_locs[i]] == 1 ) {
                numCausal += 1;
-               causal_locs.push_back(i);
             }
         }
+	}
 
 	/*auto it = config_hashmap.find(causal_locs);
 	if (it != config_hashmap.end()) {
@@ -417,6 +431,7 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
 	  if (!checkOR(causal_bool_per_study_for_config, num_of_studies, numCausal)) {
             continue;
 	  }
+	  num_expansions += 1;
 	  //printf("next config to eval\n");
 	  //printVec(nextConfigure);
           double tmp_likelihood = 0;
@@ -497,6 +512,8 @@ double PostCal::expand_and_compute_lkl(vector<int> configure, bool make_updates,
 	delete[] causal_idx_per_study;
 	delete[] causal_bool_per_study;
 	delete[] causal_bool_per_study_for_config;
+
+	*l_num_expansions = num_expansions;
 
 	return max_lkl;
 }

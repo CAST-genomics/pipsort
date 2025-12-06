@@ -1129,6 +1129,7 @@ vector<char> PostCal::findOptimalSetGreedy(vector<double> * stat, double sigma_g
 
     vector<char> causalSet(totalSnpCount,'0');
 
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     if (configsFile != "") {
       totalLikeLihoodLOG = computeTotalLikelihoodGivenConfigs(stat, sigma_g_squared);
     } else if (do_sss) {
@@ -1136,6 +1137,8 @@ vector<char> PostCal::findOptimalSetGreedy(vector<double> * stat, double sigma_g
     } else {
       totalLikeLihoodLOG = computeTotalLikelihood(stat, sigma_g_squared);
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        std::cout << "Time to eval all= " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "[µs]" << std::endl;
 
     export2File(outputFileName+"_log.txt", exp(totalLikeLihoodLOG)); //Output the total likelihood to the log File
     for(int i = 0; i < totalSnpCount; i++) {
