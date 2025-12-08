@@ -16,26 +16,27 @@
 
 using namespace arma;
 
-vector<vector<int>> PostCal::get_nbdplus(vector<int> curr_config) {
+vector<vector<int>> PostCal::get_nbdplus(vector<int> curr_causal_locs) {
     //each vector will be the list of indices corresponding to causal snps
     vector<vector<int>> plusone_configs;
-    int curr_num_causal = 0;
-    vector<int> curr_causal_locs;
-    for ( int i = 0; i < curr_config.size(); i++ ) {
-        if ( curr_config[i] == 1 ) {
-           curr_num_causal += 1;
-           curr_causal_locs.push_back(i);
-	}
-    }
+    int curr_num_causal = curr_causal_locs.size();
+
     if ( curr_num_causal >= 10 ) {
        return plusone_configs; //going to cap at max 10 causal variants
     }
+    
+    vector<int> curr_config(unionSnpCount, 0);
+    for ( int i = 0; i < curr_num_causal; i++ ) {
+        curr_config[curr_causal_locs[i]] = 1;
+    }
+
     int num_plus_configs = curr_config.size() - curr_num_causal;
     for ( int i = 0; i < curr_config.size(); i++ ) {
       if ( curr_config[i]  == 0 ) {
           vector<int> new_config;
-	  new_config.push_back(curr_config[i]);
+	  new_config.push_back(i);
 	  new_config.insert(new_config.end(), curr_causal_locs.begin(), curr_causal_locs.end());
+	  std::sort(new_config.begin(), new_config.end()); //sort ascending
 	  plusone_configs.push_back(new_config);
       }
     }
@@ -45,17 +46,11 @@ vector<vector<int>> PostCal::get_nbdplus(vector<int> curr_config) {
     return plusone_configs;
 }
 
-vector<vector<int>> PostCal::get_nbdminus(vector<int> curr_config) {
+vector<vector<int>> PostCal::get_nbdminus(vector<int> curr_causal_locs) {
     //each vector will be the list of indices corresponding to causal snps
     vector<vector<int>> minusone_configs;
-    int curr_num_causal = 0;
-    vector<int> curr_causal_locs;
-    for ( int i = 0; i < curr_config.size(); i++ ) {
-        if ( curr_config[i] == 1 ) {
-           curr_num_causal += 1;
-           curr_causal_locs.push_back(i);
-	}
-    }
+    int curr_num_causal = curr_causal_locs.size();
+
     int num_minus_configs = curr_num_causal;
     for ( int i = 0; i < num_minus_configs; i++ ) {
         vector<int> new_config;
@@ -73,25 +68,25 @@ vector<vector<int>> PostCal::get_nbdminus(vector<int> curr_config) {
 }
 
 
-vector<vector<int>> PostCal::get_nbdzero(vector<int> curr_config) {
+vector<vector<int>> PostCal::get_nbdzero(vector<int> curr_causal_locs) {
     //each vector will be the list of indices corresponding to causal snps
     vector<vector<int>> nbdzero_configs;
-    int curr_num_causal = 0;
-    vector<int> curr_causal_locs;
-    for ( int i = 0; i < curr_config.size(); i++ ) {
-        if ( curr_config[i] == 1 ) {
-           curr_num_causal += 1;
-           curr_causal_locs.push_back(i);
-	}
+    int curr_num_causal = curr_causal_locs.size();
+
+    vector<int> curr_config(unionSnpCount, 0);
+    for ( int i = 0; i < curr_num_causal; i++ ) {
+        curr_config[curr_causal_locs[i]] = 1;
     }
+
     int num_nbdzero_configs = curr_num_causal * (curr_config.size() - curr_num_causal);
-    vector<vector<int>> minusone_configs = get_nbdminus(curr_config); 
+    vector<vector<int>> minusone_configs = get_nbdminus(curr_causal_locs); 
     for ( int i = 0; i < curr_config.size(); i++ ) {
 	if ( curr_config[i] == 0 ) {
 	    for ( vector<int> v : minusone_configs ) {
 		vector<int> new_config;
 		new_config.push_back(i);
 		new_config.insert(new_config.end(), v.begin(), v.end());
+		std::sort(new_config.begin(), new_config.end()); //sort ascending
 		nbdzero_configs.push_back(new_config);
 	    }
 	}
@@ -278,18 +273,10 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
 	
 	int num_expansions = 0;
 
-	int numCausal = 0;
-	if ( causal_locs.size() == 1 ) {
-           if ( causal_locs[0] != configure.size() ) {
-              configure[causal_locs[0]] = 1;   
-	   } //else it is the representation of the zero vector
-	} else {
+	int numCausal = causal_locs.size();
         for ( int i = 0; i < causal_locs.size(); i++ ) {
-            if ( configure[causal_locs[i]] == 1 ) {
-               numCausal += 1;
-            }
+            configure[causal_locs[i]] = 1;
         }
-	}
 
 	/*auto it = config_hashmap.find(causal_locs);
 	if (it != config_hashmap.end()) {
