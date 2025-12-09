@@ -1159,7 +1159,7 @@ vector<char> PostCal::findOptimalSetGreedy(vector<double> * stat, double sigma_g
       if ( pip > 0.05 ) {
         causalSet[i] = '1';
       }
-      printf("post value for index %d = %f\n", i, pip);
+      //printf("post value for index %d = %f\n", i, pip);
     }
     //printf("causal set:\n");
     //printCharVec(causalSet);

@@ -13,6 +13,7 @@
 #include <omp.h>
 #include <ctime>
 #include <chrono>
+#include <cassert>
 
 using namespace arma;
 
@@ -135,8 +136,10 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     std::mt19937 gen(12345); //deterministic
     
     int nP = omp_get_num_procs();
-    nP = 1;
-    vector<int> thread_info(2, 0);
+    nP = 16;
+    vector<int> thread_info(nP, 0);
+    vector<int> thread_iters(nP, 0);
+    vector<std::chrono::microseconds> thread_time(nP, std::chrono::microseconds(0));
     
     omp_set_num_threads(nP);
     printf("num threads is %d\n", nP); 
@@ -144,7 +147,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     std::chrono::microseconds total_time{0};
 
-    int total_iteration = 10; //TODO for now
+    int total_iteration = 5; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
 
 	int numCausal = causal_locs.size();
@@ -182,6 +185,9 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	int num_expansions_for_curr = 0;
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 	double tmp_likelihood = expand_and_compute_lkl(causal_locs, make_updates, stat, sigma_g_squared, &num_expansions_for_curr);
+	   if ( num_expansions_for_curr == 0 ) {
+              assert(causal_locs.size() == 0);
+	   }
 	__atomic_add_fetch(&num_expansions, num_expansions_for_curr, 0);
 
 	if ( make_updates ) {
@@ -190,16 +196,24 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 	vector<double> probs(nbd.size(), 0);
 	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
-        #pragma omp parallel for
+	//TODO chunksize, static, schedule (stuff to test)
+        #pragma omp parallel for schedule(static, 2)
 	for ( int i = 0; i < nbd.size(); i++ ) {
 	   int tnum = omp_get_thread_num();
-	   thread_info[tnum] += 1;
+	   thread_iters[tnum] += 1;
+           std::chrono::steady_clock::time_point thread_start = std::chrono::steady_clock::now();
 	   vector<int> v = nbd[i];
 	   int l_num_expansions = 0;
 	   double v_lkl = expand_and_compute_lkl(v, false, stat, sigma_g_squared, &l_num_expansions); //compute lkl but no update
 	   probs[i] = v_lkl;
+	   thread_info[tnum] += l_num_expansions;
+	   if ( l_num_expansions == 0 ) {
+              assert(v.size() == 0);
+	   }
 	   __atomic_add_fetch(&num_expansions, l_num_expansions, 0); //TODO
-	   printf("num expansions for iter=%d, i=%d is %d\n",iter, i, l_num_expansions);
+	   //printf("num expansions for iter=%d, i=%d is %d\n",iter, i, l_num_expansions);
+           std::chrono::steady_clock::time_point thread_end = std::chrono::steady_clock::now();
+           thread_time[tnum] += std::chrono::duration_cast<std::chrono::microseconds>(thread_end - thread_start);
 	}
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
      total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -259,7 +273,9 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     
     printf("explored %d configs\n", num_expansions);
     for ( int i = 0; i < thread_info.size(); i++ ) {
-        printf("thread %d did %d\n", i, thread_info[i]);
+        printf("thread %d did %d expansions\n", i, thread_info[i]);
+        printf("thread %d did %d iters\n", i, thread_iters[i]);
+        printf("thread %d time = %lld\n", i, (long long)thread_time[i].count());
     }
 
 
