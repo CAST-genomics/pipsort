@@ -70,7 +70,7 @@ double min(double a, double b) {
 
 void printVec(vector<int> v) {
    for ( int i = 0; i < v.size(); i++ ) {
-     printf("%d", v[i]);
+     printf("%d,", v[i]);
    }
    printf("\n");
 }

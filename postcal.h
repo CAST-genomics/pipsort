@@ -77,7 +77,7 @@ private:
     vector<vector<int>> idx_to_union_pos_map;
     vector<string> all_snp_pos;
     int unionSnpCount;
-    //std::unordered_map<vector<int>, double, VecHash> config_hashmap;
+    std::unordered_map<vector<int>, double, VecHash> config_hashmap;
     std::unordered_set<vector<int>, VecHash> explored_set;
 
     //addition in log space
@@ -232,6 +232,7 @@ public:
     double computeTotalLikelihoodGivenConfigs(vector<double> * stat, double sigma_g_squared) ;
     double sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared); 
     double expand_and_compute_lkl(vector<int> configure, bool make_updates, vector<double> * stat, double sigma_g_squared, int * l_num_expansions);
+    double fake_expand(vector<int> causal_locs);
 
     bool checkOR(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);
     bool checkAND(int **causal_bool_per_study_for_config, const int num_of_studies, int numCausal);

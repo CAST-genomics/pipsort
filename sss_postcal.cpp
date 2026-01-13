@@ -22,8 +22,8 @@ vector<vector<int>> PostCal::get_nbdplus(vector<int> curr_causal_locs) {
     vector<vector<int>> plusone_configs;
     int curr_num_causal = curr_causal_locs.size();
 
-    if ( curr_num_causal >= 10 ) {
-       return plusone_configs; //going to cap at max 10 causal variants
+    if ( curr_num_causal >= maxCausalSNP) {
+       return plusone_configs; //going to cap at max causal
     }
     
     vector<int> curr_config(unionSnpCount, 0);
@@ -113,6 +113,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     //TODO initialized as this for now
     //vector<int> configure(unionSnpCount, 0);
     vector<int> causal_locs;
+    //causal_locs.push_back(89);
 
 
 
@@ -136,7 +137,8 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     std::mt19937 gen(12345); //deterministic
     
     int nP = omp_get_num_procs();
-    nP = 16;
+    //nP = 4;
+    //nP = 1;
     vector<int> thread_info(nP, 0);
     vector<int> thread_iters(nP, 0);
     vector<std::chrono::microseconds> thread_time(nP, std::chrono::microseconds(0));
@@ -147,10 +149,9 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     std::chrono::microseconds total_time{0};
 
-    int total_iteration = 5; //TODO for now
+    int total_iteration = 10; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
 
-	int numCausal = causal_locs.size();
 
 	vector<vector<int>> nbdzero = get_nbdzero(causal_locs);
 	vector<vector<int>> nbdminus = get_nbdminus(causal_locs);
@@ -178,45 +179,89 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 	bool make_updates = true;	
 	//check if we have already explored this config
-	if (explored_set.find(causal_locs) != explored_set.end()) {
-	    make_updates = false;
+	//if (explored_set.find(causal_locs) != explored_set.end()) {
+	//    make_updates = false;
+        //}
+        auto it = config_hashmap.find(causal_locs);
+        if (it != config_hashmap.end()) {
+            make_updates = false; 
         }
 	
 	int num_expansions_for_curr = 0;
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 	double tmp_likelihood = expand_and_compute_lkl(causal_locs, make_updates, stat, sigma_g_squared, &num_expansions_for_curr);
-	   if ( num_expansions_for_curr == 0 ) {
-              assert(causal_locs.size() == 0);
-	   }
+	printf("lkl of curr = %lf\n", tmp_likelihood);
+        std::chrono::steady_clock::time_point temp_end = std::chrono::steady_clock::now();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(temp_end - start).count();
+        std::cout << "time for expand= " << ms << " ms\n";
+
+	//if ( num_expansions_for_curr == 0 ) {
+        //   assert(causal_locs.size() == 0);
+	//}
 	__atomic_add_fetch(&num_expansions, num_expansions_for_curr, 0);
 
-	if ( make_updates ) {
-           explored_set.insert(causal_locs);
-	}
-
+	//if ( make_updates ) {
+        //   explored_set.insert(causal_locs);
+	//}
+	
+        int num_new_configs = 0;
+	
+#define DEBUG
 	vector<double> probs(nbd.size(), 0);
+        vector<int> not_done;
 	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
 	//TODO chunksize, static, schedule (stuff to test)
-        #pragma omp parallel for schedule(static, 2)
+        #pragma omp parallel for schedule(static, 1)
 	for ( int i = 0; i < nbd.size(); i++ ) {
+#ifdef DEBUG
 	   int tnum = omp_get_thread_num();
 	   thread_iters[tnum] += 1;
            std::chrono::steady_clock::time_point thread_start = std::chrono::steady_clock::now();
+#endif
 	   vector<int> v = nbd[i];
-	   int l_num_expansions = 0;
-	   double v_lkl = expand_and_compute_lkl(v, false, stat, sigma_g_squared, &l_num_expansions); //compute lkl but no update
-	   probs[i] = v_lkl;
-	   thread_info[tnum] += l_num_expansions;
-	   if ( l_num_expansions == 0 ) {
-              assert(v.size() == 0);
-	   }
-	   __atomic_add_fetch(&num_expansions, l_num_expansions, 0); //TODO
-	   //printf("num expansions for iter=%d, i=%d is %d\n",iter, i, l_num_expansions);
-           std::chrono::steady_clock::time_point thread_end = std::chrono::steady_clock::now();
-           thread_time[tnum] += std::chrono::duration_cast<std::chrono::microseconds>(thread_end - thread_start);
+           auto it = config_hashmap.find(v);
+           if (it != config_hashmap.end()) {
+               probs[i] = it->second;  
+           } else {
+	       int l_num_expansions = 0;
+	       double v_lkl = expand_and_compute_lkl(v, true, stat, sigma_g_squared, &l_num_expansions); //compute lkl but no update
+	       probs[i] = v_lkl;
+               #pragma omp critical
+               {
+               not_done.push_back(i);
+               }
+
+         
+#ifdef DEBUG
+	       thread_info[tnum] += l_num_expansions;
+	       //if ( l_num_expansions == 0 ) {
+               //   assert(v.size() == 0);
+	       //}
+	       __atomic_add_fetch(&num_expansions, l_num_expansions, 0); //TODO
+	       //printf("num expansions for iter=%d, i=%d is %d\n",iter, i, l_num_expansions);
+               std::chrono::steady_clock::time_point thread_end = std::chrono::steady_clock::now();
+               thread_time[tnum] += std::chrono::duration_cast<std::chrono::microseconds>(thread_end - thread_start);
+#endif
+           }
 	}
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-     total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+ 
+        if ( not_done.size() == 0 ) {
+            printf("hit break condition\n");
+            break; //we have seen no new configs, end
+        }
+
+        for ( int i : not_done ) {
+           assert(i <= nbd.size());
+           assert(i >= 0);
+        }
+
+	//do the hashmap updates outside the pragma
+        for ( int i : not_done ) {
+           vector<int> v = nbd[i];
+           config_hashmap[v] = probs[i];
+        }
 
 	//sampling
 
@@ -256,7 +301,10 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
                 final_idx = plus_sample + num_zero + num_minus;
                 break;
         }
-
+	
+ 	auto min_it = std::min_element(probs.begin(), probs.end());
+	printf("min of probs = %lf\n", *min_it);
+	printf("final idx = %ld\n", final_idx);
 	causal_locs = nbd[final_idx];
 
     }
@@ -282,6 +330,71 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     return(sss_sum_lkl);
 }
 
+double PostCal::fake_expand(vector<int> causal_locs) {
+///*
+  double sum = 0;
+  //int n = 10000000; int reps = 1;
+  int n = 1000000; int reps = 20;
+  //int n = 2048; int reps = 25000;
+  vector<double> x(n, 0.2); 
+  vector<int> y(n, 0.1);
+  vector<int> z(n, 0);
+  for (int i = 1; i < n; i++ ) {
+     y[i] += y[i-1];
+     x[i] += x[i-1];
+  }
+  for ( int j = 0; j < reps; j++ ) {
+     for ( int i = 0; i < n; i++ ) {
+        z[i] += x[i] * y[i];
+        x[i] += 0.01;
+        y[i] += 0.01;
+     }
+  }
+  return z[0];
+//*/
+  
+/*
+  int n = 256;
+  arma::mat A = arma::randu<arma::mat>(n, n);
+  arma::mat B = arma::randu<arma::mat>(n, n);
+double ret = 0;
+for ( int i = 0; i < 40; i++ ) {
+  arma::mat C = A * B;
+  ret = C(0,0);
+}
+  return ret;
+*/
+
+/*
+size_t n = 256;
+   std::random_device rd;
+    std::mt19937 gen(654);
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    std::vector<std::vector<double>> A(n, std::vector<double>(n));
+    std::vector<std::vector<double>> B(n, std::vector<double>(n));
+    std::vector<std::vector<double>> C(n, std::vector<double>(n));
+
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < n; j++) {
+            A[i][j] = dist(gen);
+            B[i][j] = dist(gen);
+        }
+    }
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < n; j++) {
+            double sum = 0;
+            for (size_t k = 0; k < n; k++ ) {
+               sum += A[i][k]*B[k][j];
+            }
+            C[i][j] = sum;
+        }
+    }
+
+    return C[0][0];
+*/
+
+}
 
 double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_updates, vector<double> * stat, double sigma_g_squared, int * l_num_expansions) {
 
@@ -294,10 +407,10 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
             configure[causal_locs[i]] = 1;
         }
 
-	/*auto it = config_hashmap.find(causal_locs);
-	if (it != config_hashmap.end()) {
-    	    return it->second;  // access the double value associated with the key
-	}*/
+	//auto it = config_hashmap.find(causal_locs);
+	//if (it != config_hashmap.end()) {
+    	//    return it->second;  // access the double value associated with the key
+	//}
 
         if ( numCausal == 0 ) { //if no causal, just update sum likelihood, nothing else should change
                 vector<int> tempConfigure(totalSnpCount, 0);
@@ -328,8 +441,8 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
 		}
 
 		//TODO where to put the pragma
-                #pragma omp critical
 		if ( make_updates ) { 
+		   #pragma omp critical
                    sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
 		   //emplace won't make a copy of causal_locs
 		   //config_hashmap.emplace(causal_locs, tmp_likelihood);
@@ -435,6 +548,10 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
             continue;
 	  }
 	  num_expansions += 1;
+	//VecHash hasher;
+	//std::size_t h = hasher(causal_locs);
+
+	//std::cout << h << "\n";
 	  //printf("next config to eval\n");
 	  //printVec(nextConfigure);
           double tmp_likelihood = 0;
@@ -460,8 +577,8 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
              max_lkl = tmp_likelihood;
 	  }
         
-         #pragma omp critical
 	 if ( make_updates ) {
+            #pragma omp critical
             sss_sum_lkl = addlogSpace(sss_sum_lkl, tmp_likelihood);
 	 }
 
@@ -475,7 +592,7 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
 	     }
 	   }
 	   if ( allZero ) {
-                #pragma omp critical
+             #pragma omp critical
              noCausal[w] = addlogSpace(noCausal[w], tmp_likelihood);
 	   }
 	 }
@@ -487,12 +604,11 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
                sharedCausal = false;
 	     }
 	   }
+           #pragma omp critical
 	   if ( sharedCausal ) {
-                #pragma omp critical
              sharedPips[causal_locs[g]] =  addlogSpace(sharedPips[causal_locs[g]], tmp_likelihood);
 	     sharedLL[causal_locs[g]] = addlogSpace(sharedLL[causal_locs[g]], just_ll);
 	   } else {
-                #pragma omp critical
              notSharedLL[causal_locs[g]] = addlogSpace(notSharedLL[causal_locs[g]], just_ll);
 	   }
 	 }
@@ -504,7 +620,6 @@ double PostCal::expand_and_compute_lkl(vector<int> causal_locs, bool make_update
          }        
 	 }
        }
-	//#pragma omp critical
 	//config_hashmap[causal_locs] = max_lkl;
 
 	for (int i = 0; i < num_of_studies; i++) {

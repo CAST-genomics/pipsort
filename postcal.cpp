@@ -745,6 +745,7 @@ double PostCal::computeTotalLikelihood(vector<double>* stat, double sigma_g_squa
 
     
     int nP = omp_get_num_procs();
+    nP = 64;
     printf("num procs = %d\n", nP);
     printf("max num procs = %d\n", omp_get_max_threads());
     printf("num threads = %d\n", omp_get_num_threads());
