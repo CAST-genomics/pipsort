@@ -19,6 +19,7 @@ using namespace arma;
 
 void printGSLPrint(mat A, int row, int col);
 //
+/*
     // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
 // not sure about the noexcept
 struct VecHash {
@@ -37,6 +38,23 @@ struct VecHash {
         return seed;
     }
 };
+*/
+
+struct VecHash {
+    std::size_t operator()(std::vector<int> const& vec) const noexcept {
+        // Start with a large prime or the size
+        std::size_t seed = 0xCBF29CE484222325ULL; 
+        
+        for (int v : vec) {
+            // Simple, fast bit-mixing (Golden Ratio constant)
+            seed ^= static_cast<std::size_t>(v) + 0x9e3779b97f4a7c15ULL 
+                    + (seed << 6) + (seed >> 2);
+        }
+        
+        return seed;
+    }
+};
+
 
 class PostCal{
 private:

@@ -113,7 +113,8 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     //TODO initialized as this for now
     //vector<int> configure(unionSnpCount, 0);
     vector<int> causal_locs;
-    //causal_locs.push_back(89);
+    //causal_locs.push_back(330);
+    //causal_locs.push_back(181);
 
 
 
@@ -149,8 +150,17 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     std::chrono::microseconds total_time{0};
 
-    int total_iteration = 10; //TODO for now
+    double old_sum_lkl = 0;
+
+    int total_iteration = 1000; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
+        
+	if ( causal_locs.size() == 0 ) {
+           printf("curr causal = all zeros vector\n");
+        } else {
+           printf("curr causal: \n");
+           printVec(causal_locs);
+        }
 
 
 	vector<vector<int>> nbdzero = get_nbdzero(causal_locs);
@@ -207,7 +217,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
         int num_new_configs = 0;
 	
 #define DEBUG
-	vector<double> probs(nbd.size(), 0);
+	vector<double> loglkls(nbd.size(), 0);
         vector<int> not_done;
 	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
 	//TODO chunksize, static, schedule (stuff to test)
@@ -221,11 +231,11 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	   vector<int> v = nbd[i];
            auto it = config_hashmap.find(v);
            if (it != config_hashmap.end()) {
-               probs[i] = it->second;  
+               loglkls[i] = it->second;  
            } else {
 	       int l_num_expansions = 0;
 	       double v_lkl = expand_and_compute_lkl(v, true, stat, sigma_g_squared, &l_num_expansions); //compute lkl but no update
-	       probs[i] = v_lkl;
+	       loglkls[i] = v_lkl;
                #pragma omp critical
                {
                not_done.push_back(i);
@@ -247,48 +257,84 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
  
+        //check break condition
         if ( not_done.size() == 0 ) {
             printf("hit break condition\n");
             break; //we have seen no new configs, end
         }
+        //check convergence condition
+        if ( iter >= 100 ) {
+            if ( (1 - exp(old_sum_lkl - sss_sum_lkl)) <= 0.001 ) {
+               printf("hit convergence condition\n");
+               break; //we have seen no new configs, end
+            }
+        }
 
+#ifdef DEBUG
         for ( int i : not_done ) {
            assert(i <= nbd.size());
            assert(i >= 0);
         }
+#endif
 
 	//do the hashmap updates outside the pragma
         for ( int i : not_done ) {
-           vector<int> v = nbd[i];
-           config_hashmap[v] = probs[i];
+           // Zero allocation, zero copying
+           const auto& v = nbd[i];
+           config_hashmap[v] = loglkls[i];
         }
+
 
 	//sampling
 
 	double weight_zero = 0.0; size_t zero_sample = nbd.size(); //nbd.size() is an invalid index
 	double weight_minus = 0.0; size_t minus_sample = nbd.size();
 	double weight_plus = 0.0; size_t plus_sample = nbd.size();
+        
+        printf("num zero, num minus, num_plus = %d,%d,%d\n", num_zero, num_minus, num_plus);
 
 	//std::random_device rd; // random
 	//std::mt19937 gen(rd()); // random
 	if ( num_zero != 0 ) {
-	    std::discrete_distribution<size_t> dist(probs.begin(), probs.begin()+num_zero);
+            vector<double> probs;
+            auto max_it = std::max_element(loglkls.begin(), loglkls.begin()+num_zero);
+            double max_log = *max_it;
+            for ( int ii = 0; ii < num_zero; ii++ ) {
+               probs.push_back(exp(loglkls[ii]-max_log));
+            }
+	    std::discrete_distribution<size_t> dist(probs.begin(), probs.end());
 	    zero_sample = dist(gen);
-	    weight_zero = std::accumulate(probs.begin(), probs.begin()+num_zero, 0.0);
+	    weight_zero = std::accumulate(probs.begin(), probs.end(), 0.0);
 	}
 	if ( num_minus != 0 ) {
-	    std::discrete_distribution<size_t> dist(probs.begin()+num_zero, probs.begin()+num_zero+num_minus);
+            vector<double> probs;
+            auto max_it = std::max_element(loglkls.begin()+num_zero, loglkls.begin()+num_zero+num_minus);
+            double max_log = *max_it;
+            for ( int ii = num_zero; ii < num_zero+num_minus; ii++ ) {
+               probs.push_back(exp(loglkls[ii]-max_log));
+            }
+	    std::discrete_distribution<size_t> dist(probs.begin(), probs.end());
 	    minus_sample = dist(gen);
-	    weight_minus = std::accumulate(probs.begin()+num_zero, probs.begin()+num_zero+num_minus, 0.0);
+	    weight_minus = std::accumulate(probs.begin(), probs.end(), 0.0);
 	}
 	if ( num_plus != 0 ) {
-	    std::discrete_distribution<size_t> dist(probs.begin()+num_zero+num_minus, probs.end());
+            vector<double> probs;
+            auto max_it = std::max_element(loglkls.begin()+num_zero+num_minus, loglkls.end());
+            double max_log = *max_it;
+            for ( int ii = num_zero+num_minus; ii < loglkls.size(); ii++ ) {
+               probs.push_back(exp(loglkls[ii]-max_log));
+            }
+	    std::discrete_distribution<size_t> dist(probs.begin(), probs.end());
 	    plus_sample = dist(gen);
-	    weight_plus = std::accumulate(probs.begin()+num_zero+num_minus, probs.end(), 0.0);
+	    weight_plus = std::accumulate(probs.begin(), probs.end(), 0.0);
 	}
+        printf("weight zero = %f\n", weight_zero);
+        printf("weight minus = %f\n", weight_minus);
+        printf("weight plus = %f\n", weight_plus);
 
 	std::discrete_distribution<size_t> dist({weight_zero, weight_minus, weight_plus});
 	size_t idx = dist(gen);
+        printf("picking idx = %ld\n", idx);
 	size_t final_idx;
 	switch (idx) {
     	    case 0:
@@ -302,10 +348,15 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
                 break;
         }
 	
- 	auto min_it = std::min_element(probs.begin(), probs.end());
-	printf("min of probs = %lf\n", *min_it);
+ 	auto max_iter = std::max_element(loglkls.begin(), loglkls.end());
+        int max_index = std::distance(loglkls.begin(), max_iter);
+        printVec(nbd[max_index]);
+	printf("max of probs = %lf\n", *max_iter);
 	printf("final idx = %ld\n", final_idx);
 	causal_locs = nbd[final_idx];
+        printf("old sum lkl = %f\n", old_sum_lkl);
+        printf("sss sum lkl = %f\n", sss_sum_lkl);
+        old_sum_lkl = sss_sum_lkl;
 
     }
 

@@ -1,5 +1,5 @@
 CC=g++
-#CFLAGS := -O3
+CFLAGS := -O3
 #CFLAGS := -g -O3
 CFLAGS := -g -O0
 
