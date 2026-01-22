@@ -155,12 +155,12 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
     int total_iteration = 1000; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
         
-	if ( causal_locs.size() == 0 ) {
+	/*if ( causal_locs.size() == 0 ) {
            printf("curr causal = all zeros vector\n");
         } else {
            printf("curr causal: \n");
            printVec(causal_locs);
-        }
+        }*/
 
 
 	vector<vector<int>> nbdzero = get_nbdzero(causal_locs);
@@ -200,10 +200,10 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	int num_expansions_for_curr = 0;
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 	double tmp_likelihood = expand_and_compute_lkl(causal_locs, make_updates, stat, sigma_g_squared, &num_expansions_for_curr);
-	printf("lkl of curr = %lf\n", tmp_likelihood);
+//	printf("lkl of curr = %lf\n", tmp_likelihood);
         std::chrono::steady_clock::time_point temp_end = std::chrono::steady_clock::now();
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(temp_end - start).count();
-        std::cout << "time for expand= " << ms << " ms\n";
+    //    std::cout << "time for expand= " << ms << " ms\n";
 
 	//if ( num_expansions_for_curr == 0 ) {
         //   assert(causal_locs.size() == 0);
@@ -214,12 +214,11 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
         //   explored_set.insert(causal_locs);
 	//}
 	
-        int num_new_configs = 0;
 	
-#define DEBUG
+//#define DEBUG
 	vector<double> loglkls(nbd.size(), 0);
         vector<int> not_done;
-	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
+//	printf("nbd size for iter %d is %ld\n", iter, nbd.size());
 	//TODO chunksize, static, schedule (stuff to test)
         #pragma omp parallel for schedule(static, 1)
 	for ( int i = 0; i < nbd.size(); i++ ) {
@@ -291,7 +290,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	double weight_minus = 0.0; size_t minus_sample = nbd.size();
 	double weight_plus = 0.0; size_t plus_sample = nbd.size();
         
-        printf("num zero, num minus, num_plus = %d,%d,%d\n", num_zero, num_minus, num_plus);
 
 	//std::random_device rd; // random
 	//std::mt19937 gen(rd()); // random
@@ -328,13 +326,9 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	    plus_sample = dist(gen);
 	    weight_plus = std::accumulate(probs.begin(), probs.end(), 0.0);
 	}
-        printf("weight zero = %f\n", weight_zero);
-        printf("weight minus = %f\n", weight_minus);
-        printf("weight plus = %f\n", weight_plus);
 
 	std::discrete_distribution<size_t> dist({weight_zero, weight_minus, weight_plus});
 	size_t idx = dist(gen);
-        printf("picking idx = %ld\n", idx);
 	size_t final_idx;
 	switch (idx) {
     	    case 0:
@@ -348,14 +342,16 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
                 break;
         }
 	
+#ifdef DEBUG
  	auto max_iter = std::max_element(loglkls.begin(), loglkls.end());
         int max_index = std::distance(loglkls.begin(), max_iter);
         printVec(nbd[max_index]);
 	printf("max of probs = %lf\n", *max_iter);
 	printf("final idx = %ld\n", final_idx);
-	causal_locs = nbd[final_idx];
         printf("old sum lkl = %f\n", old_sum_lkl);
         printf("sss sum lkl = %f\n", sss_sum_lkl);
+#endif
+	causal_locs = nbd[final_idx];
         old_sum_lkl = sss_sum_lkl;
 
     }
@@ -370,12 +366,14 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
         histValues[i] = exp(histValues[i]-sumLikelihood);
     }
     
+#ifdef DEBUG
     printf("explored %d configs\n", num_expansions);
     for ( int i = 0; i < thread_info.size(); i++ ) {
         printf("thread %d did %d expansions\n", i, thread_info[i]);
         printf("thread %d did %d iters\n", i, thread_iters[i]);
         printf("thread %d time = %lld\n", i, (long long)thread_time[i].count());
     }
+#endif
 
 
     return(sss_sum_lkl);
@@ -383,7 +381,6 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 double PostCal::fake_expand(vector<int> causal_locs) {
 ///*
-  double sum = 0;
   //int n = 10000000; int reps = 1;
   int n = 1000000; int reps = 20;
   //int n = 2048; int reps = 25000;
