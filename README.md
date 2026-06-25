@@ -12,7 +12,7 @@ make
 ```
 
 
-### Required or important command line options
+### Required command line options
 
 The **-l** and **-z** arguments, as can be seen in the tests/example/ folder, list the files with the LD matrix and Z scores for the SNPs in the locus, respectively. The file paths should be given either as absolute file paths or relative paths to the current directory.
 
@@ -24,20 +24,22 @@ The Z files should contain two tab-separated columns. The first column should be
 
 The **-n** argument specifies the population size for each study, comma-separated. Again, this should be the same number of studies and in the same order as was given by the -l and -z arguments. 
 
-The **-o** argument is simply the output name prefix for the PIPSORT output files.
+The **-o** argument is the output name prefix for the PIPSORT output files.
+
+### Important command line options
 
 **-c** controls the maximum number of causal SNPs allowed at a locus; the default is 3. 
 
+**-sp** is the sharing parameter. The default is 0.75, but can be modified by the user. The parameter is used in the prior to adjust the weight of configurations. Values closer to 1 will assign higher weight to configurations that model shared signals and values closer to 0 will assign higher weight to configurations that model study-specific signals. In practice, we recommend users try different values and compare across results. In our paper, we try both 0.25 and 0.75 on real data and compare PIP values across both sets of results.  
+
 ### Other command line options (from MsCAVIAR)
 
-The other command line options are listed below. We do not recommend changing -g or -s for most users.
+The other command line options are listed below. We do not recommend changing these for most users.
 
 **-t** controls the heterogeneity between the studies; in other words, the variance in the effect sizes of causal SNPs not accounted for by sample size imbalance. The default is 0.52.
 
 ```
--r RHO, --rho-prob=RHO     set $rho$ probability (default 0.95)
 -g GAMMA, --gamma      set $gamma$ the prior of a SNP being causal (default 0.01)
--c causal          set the maximum number of causal SNPs (default 3)
 -t TAU_SQR, --tau_sqr=TAU_SQR  set the heterogeneity (t^2) across studies, default is 0.52
 -s SIGMA_G_SQR, --sigma_g_squared=SIGMA_G_SQR    set the NCP variance for the smallest study, default is 5.2
 
