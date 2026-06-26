@@ -21,6 +21,14 @@ cd pipsort/
 make
 ```
 
+### Quickstart
+
+An example command for running PIPSORT:
+
+```bash
+./PIPSORT -c 2 -l ldfiles.txt -z zfiles.txt -m snp_map -n 334324,6771 -p 0.25 -o pipsort_results
+```
+
 
 ### Required command line options
 
@@ -40,7 +48,7 @@ The **-o** argument is the output name prefix for the PIPSORT output files.
 
 **-c** controls the maximum number of causal SNPs allowed at a locus; the default is 3. 
 
-**-sp** is the sharing parameter. The default is 0.75, but can be modified by the user. The parameter is used in the prior to adjust the weight of configurations. Values closer to 1 will assign higher weight to configurations that model shared signals and values closer to 0 will assign higher weight to configurations that model study-specific signals. In practice, we recommend users try different values and compare across results. In our paper, we try both 0.25 and 0.75 on real data and compare PIP values across both sets of results.  
+**-p** is the sharing parameter. The default is 0.75, but can be modified by the user. The parameter is used in the prior to adjust the weight of configurations. Values closer to 1 will assign higher weight to configurations that model shared signals and values closer to 0 will assign higher weight to configurations that model study-specific signals. In practice, we recommend users try different values and compare across results. In our paper, we try both 0.25 and 0.75 on real data and compare PIP values across both sets of results.  
 
 ### Other command line options (from MsCAVIAR)
 
@@ -60,6 +68,18 @@ The other command line options are listed below. We do not recommend changing th
 An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `run_example.sh`.
 
 There are a few probabilities computed after PIPSORT runs: global PIPs and not shared PIPs. Scripts for computing these are provided in `utils/` and example usage is provided in `run_example.sh`.
+
+### Important utility scripts
+
+After running `PIPSORT` and obtaining output files `study0_post.txt`, `study1_post.txt`, `shared_pips.txt`, global PIPs and not-shared PIPs can be computed with the provided utility scripts like this:
+
+```
+python get_global_pips.py study0_post.txt study1_post.txt shared_pips.txt global_pips.txt
+python get_not_shared_pips.py shared_pips.txt global_pips.txt not_shared_pips.txt
+```
+
+Additional key utility scripts:
+- `extract_all_snps_rsid.py` can be used to construct the `snp_map` (see pipeline in example)
 
 ### Stochastic Shotgun Search
 
