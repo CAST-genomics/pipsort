@@ -1,9 +1,19 @@
-Extends https://github.com/nlapier2/MsCAVIAR/
+# PIPSORT
+
+### About
+
+PIPSORT is a multi-ancestry fine-mapping tool. It takes in summary statistics and LD matrices from studies of two ancestries and outputs ancestry-specific PIPs as well as other probabilities of interest (see our manuscript linked below). PIPSORT was designed to distinguish GWAS signals that are shared across ancestries versus ancestry-specific. The variants do not have to be matched across ancestries. 
+
+PIPSORT extends https://github.com/nlapier2/MsCAVIAR/
 
 The majority of PIPSORT development was done on a fork. We have moved the code to this new repo. For prior commit history, please see https://github.com/TaraMirmira/MsCAVIAR
 
 ### Installation
 
+Required libraries:
+- GNU scientific library
+- BLAS and LAPACK
+- C++ compiler
 
 ```
 git clone https://github.com/CAST-genomics/pipsort.git
@@ -50,4 +60,17 @@ The other command line options are listed below. We do not recommend changing th
 An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `run_example.sh`.
 
 There are a few probabilities computed after PIPSORT runs: global PIPs and not shared PIPs. Scripts for computing these are provided in `utils/` and example usage is provided in `run_example.sh`.
+
+### Stochastic Shotgun Search
+
+To improve the runtime burden, PIPSORT can be run with stochastic shotgun search to shrink the otherwise exhaustive search space. The command line option for this is:
+
+**-q** 1 to use stochastic shotgun search, 0 (default) for exhaustive search 
+
+For reproduciblity, we set a seed for stochastic shotgun search. We will change this to a user-specified parameter, but for now this can be removed/modified in line 138 of `sss_postcal.cpp`: https://github.com/CAST-genomics/pipsort/blob/main/sss_postcal.cpp#L138
+
+### Citation
+
+If you use our tool, please cite our paper!
+https://www.medrxiv.org/content/10.1101/2025.11.13.25339614v1
 
