@@ -21,7 +21,7 @@ cd pipsort/
 make
 ```
 
-Installation notes: in our development, we used GCC version 10.2.0, GSL version 2.5, and OpenBLAS version 0.3.27. 
+Installation notes: in our development, we used GCC version 10.2.0, GSL version 2.5, and OpenBLAS version 0.3.27. Compiling PIPSORT generally takes less than a minute.
 
 ### Quickstart
 
@@ -78,9 +78,11 @@ PIPSORT will output 6 files. Assuming the output file prefix is `pipsort`, the f
 
 ### Example
 
-An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `run_example.sh`.
+An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `bash run_example.sh`.
 
 There are a few probabilities computed after PIPSORT runs: global PIPs and not shared PIPs. Scripts for computing these are provided in `utils/` and example usage is provided in `run_example.sh`.
+
+With a single processor, this example takes about 15 minutes to run. With 64 processors, it takes less than 2 minutes.
 
 ### Important utility scripts
 
