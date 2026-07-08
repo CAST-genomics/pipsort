@@ -11,7 +11,7 @@ The majority of PIPSORT development was done on a fork. We have moved the code t
 ### Installation
 
 Required libraries:
-- GNU scientific library
+- GNU scientific library (GSL)
 - BLAS and LAPACK
 - C++ compiler
 
@@ -20,6 +20,8 @@ git clone https://github.com/CAST-genomics/pipsort.git
 cd pipsort/
 make
 ```
+
+Installation notes: in our development, we used GCC version 10.2.0, GSL version 2.5, and OpenBLAS version 0.3.27. 
 
 ### Quickstart
 
@@ -62,6 +64,17 @@ The other command line options are listed below. We do not recommend changing th
 -s SIGMA_G_SQR, --sigma_g_squared=SIGMA_G_SQR    set the NCP variance for the smallest study, default is 5.2
 
 ```
+
+### Output
+
+PIPSORT will output 6 files. Assuming the output file prefix is `pipsort`, the files are:
+- pipsort_study0_pips.txt (study-specific PIPs for the first study)
+- pipsort_study0_set.txt (all variants with study-specific PIP >= 0.5)
+- pipsort_study1_pips.txt (study-specific PIPs for the second study)
+- pipsort_study1_set.txt (all variants with study-specific PIP >= 0.5)
+- pipsort_nocausal.txt (a single-column two line file with P(no causal in study 0) as the first number and P(no causal in study 1) as the second)
+- pipsort_shared_pips.txt (shared PIPs)
+
 
 ### Example
 
