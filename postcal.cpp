@@ -1141,7 +1141,8 @@ vector<char> PostCal::findOptimalSetGreedy(vector<double> * stat, double sigma_g
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         std::cout << "Time to eval all= " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "[µs]" << std::endl;
 
-    export2File(outputFileName+"_log.txt", exp(totalLikeLihoodLOG)); //Output the total likelihood to the log File
+    //export2File(outputFileName+"_log.txt", exp(totalLikeLihoodLOG)); //Output the total likelihood to the log File
+    export2File(outputFileName+"_log.txt", ret_cond); //Output the total likelihood to the log File
     for(int i = 0; i < totalSnpCount; i++) {
         total_post = addlogSpace(total_post, postValues[i]);
     }

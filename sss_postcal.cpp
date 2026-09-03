@@ -152,16 +152,16 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
     double old_sum_lkl = 0;
 
-    int total_iteration = 1000; //TODO for now
+    int total_iteration = 200; //TODO for now
     for(int iter = 0; iter < total_iteration; iter++) {
         
-	/*if ( causal_locs.size() == 0 ) {
+/*	if ( causal_locs.size() == 0 ) {
            printf("curr causal = all zeros vector\n");
         } else {
            printf("curr causal: \n");
            printVec(causal_locs);
-        }*/
-
+        }
+*/
 
 	vector<vector<int>> nbdzero = get_nbdzero(causal_locs);
 	vector<vector<int>> nbdminus = get_nbdminus(causal_locs);
@@ -257,15 +257,17 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
         total_time += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
  
         //check break condition
-        if ( not_done.size() == 0 ) {
-            printf("hit break condition\n");
-            break; //we have seen no new configs, end
-        }
+        //if ( not_done.size() == 0 ) {
+            //printf("hit break condition\n");
+        //    ret_cond = 1;
+        //    break; //we have seen no new configs, end
+        //}
         //check convergence condition
         if ( iter >= 100 ) {
             if ( (1 - exp(old_sum_lkl - sss_sum_lkl)) <= 0.001 ) {
-               printf("hit convergence condition\n");
-               break; //we have seen no new configs, end
+               //printf("hit convergence condition\n");
+               ret_cond = 2;
+               break; //have seen no new significant configs 
             }
         }
 
@@ -329,6 +331,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 
 	std::discrete_distribution<size_t> dist({weight_zero, weight_minus, weight_plus});
 	size_t idx = dist(gen);
+        //printf("picking %ld\n", idx);
 	size_t final_idx;
 	switch (idx) {
     	    case 0:
@@ -354,7 +357,11 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
 	causal_locs = nbd[final_idx];
         old_sum_lkl = sss_sum_lkl;
 
+        if ( iter == (total_iteration - 1) ) {
+           ret_cond = 3;
+        }
     }
+    
 
     omp_set_num_threads(1);
 

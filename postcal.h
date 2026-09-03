@@ -82,6 +82,7 @@ private:
     const int num_of_studies;
     bool haslowrank = false;
     double sss_sum_lkl; //instance variable for sss total likelihood
+    int ret_cond = 0;
 
     mat sigmaMatrix;
     mat invSigmaMatrix;
