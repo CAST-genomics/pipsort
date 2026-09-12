@@ -46,20 +46,18 @@ To test the install was successful, type `PIPSORT -h` which should show a help m
 
 ## Quickstart
 
-An example command for running PIPSORT using files in this repository:
+An small example command for running PIPSORT using files in this repository:
 
 ```bash
-cd tests/example
-PIPSORT -c 2 \
-   -l ldfiles.txt \
-   -z zfiles.txt \
-   -m snp_map \
-   -n 334324,6771 \
-   -p 0.25 \
-   -o pipsort_results
+cd tests/small_example
+PIPSORT -l ldfiles.txt \
+	-z zfiles.txt \
+	-m eur_afr_small_test_snp_map \
+	-n 7000,7000 \
+	-o test
 ```
 
-The input and output file formats are described below.
+This small example should take seconds to run. The input and output file formats, along with detailed usage, are described below.
 
 ## Usage
 
@@ -133,7 +131,7 @@ PIPSORT will output 6 files:
 - `${OUTPREFIX}_nocausal.txt`: a single-column two line file with P(no causal in study 0) as the first number and P(no causal in study 1) as the second
 - `${OUTPREFIX}_shared_pips.txt`: shared PIPs
 
-## Example
+## Larger example
 
 An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `bash run_example.sh`.
 
