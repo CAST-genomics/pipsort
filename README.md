@@ -122,7 +122,7 @@ To accommodate different sets of variants across studies, PIPSORT needs a varian
 
 * Sharing parameter (`-p`): The default is 0.75, but can be modified by the user. The parameter is used in the prior to adjust the weight of configurations. Values closer to 1 will assign higher weight to configurations that model shared signals and values closer to 0 will assign higher weight to configurations that model study-specific signals. In practice, we recommend users try different values and compare across results. In our paper, we try both 0.25 and 0.75 on real data and compare PIP values across both sets of results.
 
-### Output
+## Output files
 
 PIPSORT will output 6 files:
 
@@ -133,7 +133,7 @@ PIPSORT will output 6 files:
 - `${OUTPREFIX}_nocausal.txt`: a single-column two line file with P(no causal in study 0) as the first number and P(no causal in study 1) as the second
 - `${OUTPREFIX}_shared_pips.txt`: shared PIPs
 
-### Example
+## Example
 
 An example for running PIPSORT can be found in `tests/example`. All necessary files are provided as well as expected output files. The example can be run with `bash run_example.sh`.
 
@@ -155,7 +155,7 @@ A typical workflow for running PIPSORT consists of:
 
 Examples of PIPSORT worfklows can be found in the `scripts/` directory here: https://github.com/TaraMirmira/pipsort_workflows.
 
-### Important utility scripts
+## Important utility scripts
 
 After running `PIPSORT` and obtaining output files `study0_post.txt`, `study1_post.txt`, `shared_pips.txt`, global PIPs and not-shared PIPs can be computed with the provided utility scripts like this:
 
@@ -181,7 +181,7 @@ PIPSORT computes multiple variant-level probabilities (PIPs) in addition to a lo
 
 * P(no causal) (locus-level): Unlike the PIPs described above, which are variant-level, P(no causal) is a locus-level probability. This probability is most helpful for detecting when there are no signals at a locus for an ancestry. Low ancestry-specific PIPs and high P(no causal) are indicative of no causal signals. However, this outcome could also be a result of low power e.g. due to sample size, which should be taken into account. 
 
-### Citation
+## Citation
 
 If you use our tool, please cite our paper!
 https://www.medrxiv.org/content/10.1101/2025.11.13.25339614v1
