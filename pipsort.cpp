@@ -78,7 +78,7 @@ void show_help() {
              << "\t" << "-l         <LDFILE>     " << "\t" << "File containing paths to ld files" << "\n"
              << "\t" << "-z         <ZFILE>      " << "\t" << "File containing paths to Z files" << "\n"
              << "\t" << "-m         <snpMapFile> " << "\t" << "File mapping indexes to SNPs in each study" << "\n"
-             << "\t" << "-n         <int1,int2>  " << "\t" << "Sample sizes (integers) of each study. e.g. 50,100" << "\n"
+             << "\t" << "-n         <int,int>    " << "\t" << "Sample sizes (integers) of each study. e.g. 50,100" << "\n"
              << "\t" << "-o         <OUTPREFIX>  " << "\t" << "Prefix for output files" << "\n"
              << "\n Additional optional parameters:\n"
              << "\t" << "-p         <SHAREPARAM> " << "\t" << "Sharing parameter (default 0.75)" << "\n"
