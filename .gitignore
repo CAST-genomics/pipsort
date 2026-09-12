@@ -1,1 +1,18 @@
 *.o
+build/
+
+# Example output files
+tests/example/pipsort_results_log.txt
+tests/example/pipsort_results_nocausal.txt
+tests/example/pipsort_results_shared_pips.txt
+tests/example/pipsort_results_study0_post.txt
+tests/example/pipsort_results_study0_set.txt
+tests/example/pipsort_results_study1_post.txt
+tests/example/pipsort_results_study1_set.txt
+tests/small_example/test_log.txt
+tests/small_example/test_nocausal.txt
+tests/small_example/test_shared_pips.txt
+tests/small_example/test_study0_post.txt
+tests/small_example/test_study0_set.txt
+tests/small_example/test_study1_post.txt
+tests/small_example/test_study1_set.txt

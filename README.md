@@ -44,6 +44,13 @@ Installation notes: in our development, we used GCC version 10.2.0, GSL version 
 
 To test the install was successful, type `PIPSORT -h` which should show a help message.
 
+See also the `Dockerfile` which can be used to build a docker container with PIPSORT installed, e.g.:
+
+```
+docker build -t pipsort:v1.0.1 .
+docker run -it pipsort:v1.0.1 PIPSORT -h
+```
+
 ## Quickstart
 
 An small example command for running PIPSORT using files in this repository:
