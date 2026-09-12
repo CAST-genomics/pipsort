@@ -72,6 +72,7 @@ private:
     int num_configs;
     int num_groups;
     bool do_sss;
+    int seed;
     const int maxCausalSNP;    //maximum number of causal variants to consider in a locus
     double sigmaDet;    //determinant of matrix
 
@@ -116,7 +117,7 @@ public:
     /*
      constructor
     */
-    PostCal(mat * BIG_SIGMA, vector<double> * S_LONG_VEC, int snpCount, string configsFile, int num_configs, int num_groups, bool do_sss, const int MAX_causal, vector<int> num_causal, vector<vector<string> > * SNP_NAME, double sharing_param, double gamma, double t_squared, double s_squared, const int num_of_studies, vector<int> sample_sizes, vector<int> num_snps_all, bool lowrank, vector<vector<int>> idx_to_snp_map, vector<vector<int>> idx_to_union_pos_map, vector<string> all_snp_pos) : maxCausalSNP(MAX_causal),num_of_studies(num_of_studies){
+    PostCal(mat * BIG_SIGMA, vector<double> * S_LONG_VEC, int snpCount, string configsFile, int num_configs, int num_groups, bool do_sss, const int MAX_causal, vector<int> num_causal, vector<vector<string> > * SNP_NAME, double sharing_param, double gamma, double t_squared, double s_squared, const int num_of_studies, vector<int> sample_sizes, vector<int> num_snps_all, bool lowrank, vector<vector<int>> idx_to_snp_map, vector<vector<int>> idx_to_union_pos_map, vector<string> all_snp_pos, int seed) : maxCausalSNP(MAX_causal),num_of_studies(num_of_studies){
         this->gamma = gamma;
         this->SNP_NAME = SNP_NAME;
         this-> snpCount = snpCount;
@@ -124,6 +125,7 @@ public:
 	this->num_configs = num_configs;
 	this->num_groups = num_groups;
 	this->do_sss = do_sss;
+    this->seed = seed;
 	this-> totalSnpCount = std::accumulate(num_snps_all.begin(), num_snps_all.end(), 0);
         //this-> maxCausalSNP = MAX_causal;
         //this-> postValues = new double [snpCount];
@@ -249,7 +251,7 @@ public:
      */
     double computeTotalLikelihood(vector<double> * stat, double sigma_g_squared) ;
     double computeTotalLikelihoodGivenConfigs(vector<double> * stat, double sigma_g_squared) ;
-    double sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared); 
+    double sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared, int seed); 
     double expand_and_compute_lkl(vector<int> configure, bool make_updates, vector<double> * stat, double sigma_g_squared, int * l_num_expansions);
     double fake_expand(vector<int> causal_locs);
 

@@ -93,6 +93,7 @@ void show_help() {
              //<< "\t" << "-f         <int>        " << "\t" << "to out the probaility of different number of causal SNP" << "\n"
              << "\n Options for stochastic shotgun search (SSS):\n"
              << "\t" << "-q         <INT>        " << "\t" << "set to 1 to perform SSS" << "\n"
+             << "\t" << "-x         <INT>        " << "\t" << "Random seed for SSS (default 12345)" << "\n"
              << "\n Options for adding custom configurations to test:\n"
              << "\t" << "-b         <CONFIGFILE> " << "\t" << "Optional causal configuration file" << "\n"
              << "\t" << "-d         <NUMCONFIG>  " << "\t" << "Number of configurations (rows in configuration file)" << "\n"
@@ -112,6 +113,7 @@ int main( int argc, char *argv[]  ){
     double rho = 0.95;
     bool histFlag = false;
     int oc = 0;
+    int seed = 12345;
     double tau_sqr = 0.52;
     double sigma_g_squared = 5.2;
     double cutoff_threshold = 0;
@@ -194,6 +196,9 @@ int main( int argc, char *argv[]  ){
 	        case 'q':
 		        sss_flag = stoi(optarg);
 		        break;
+            case 'x':
+                seed = stoi(optarg);
+                break;
             case ':':
             case '?':
             case 'a':
@@ -246,7 +251,7 @@ int main( int argc, char *argv[]  ){
     }  
     omp_set_num_threads(1);
 
-    Model mpipsort(ldDir, zDir, snpMapFile, configsFile, num_configs, num_groups, do_sss, sample_sizes, num_causal, outputFileName, finalTotalCausalSNP, sharing_param, rho, histFlag, gamma, tau_sqr, sigma_g_squared, cutoff_threshold);
+    Model mpipsort(ldDir, zDir, snpMapFile, configsFile, num_configs, num_groups, do_sss, sample_sizes, num_causal, outputFileName, finalTotalCausalSNP, sharing_param, rho, histFlag, gamma, tau_sqr, sigma_g_squared, cutoff_threshold, seed);
     mpipsort.run();
     mpipsort.finishUp();
     return 0;

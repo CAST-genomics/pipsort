@@ -46,12 +46,20 @@ To test the install was successful, type `PIPSORT -h` which should show a help m
 
 ### Quickstart
 
-An example command for running PIPSORT:
+An example command for running PIPSORT using files in this repository:
 
 ```bash
-./PIPSORT -c 2 -l ldfiles.txt -z zfiles.txt -m snp_map -n 334324,6771 -p 0.25 -o pipsort_results
+cd tests/example
+PIPSORT -c 2 \
+   -l ldfiles.txt \
+   -z zfiles.txt \
+   -m snp_map \
+   -n 334324,6771 \
+   -p 0.25 \
+   -o pipsort_results
 ```
 
+The input and output file formats are described below.
 
 ### Required command line options
 
@@ -121,9 +129,8 @@ Additional key utility scripts:
 
 To improve the runtime burden, PIPSORT can be run with stochastic shotgun search to shrink the otherwise exhaustive search space. The command line option for this is:
 
-**-q** 1 to use stochastic shotgun search, 0 (default) for exhaustive search 
-
-For reproduciblity, we set a seed for stochastic shotgun search. We will change this to a user-specified parameter, but for now this can be removed/modified in line 138 of `sss_postcal.cpp`: https://github.com/CAST-genomics/pipsort/blob/main/sss_postcal.cpp#L138
+* **-q** 1 to use stochastic shotgun search, 0 (default) for exhaustive search 
+* **-x** `<INT>` to set the random seed. Default: 12345.
 
 ### Citation
 
