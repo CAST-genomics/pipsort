@@ -2,7 +2,7 @@
 
 ### About
 
-PIPSORT is a multi-ancestry fine-mapping tool. It takes in summary statistics and LD matrices from studies of two ancestries and outputs ancestry-specific PIPs as well as other probabilities of interest (see our manuscript linked below). PIPSORT was designed to distinguish GWAS signals that are shared across ancestries versus ancestry-specific. The variants do not have to be matched across ancestries. 
+PIPSORT is a multi-ancestry fine-mapping tool. It takes in summary statistics and LD matrices from two studies, typically of two different ancestries, and outputs ancestry-specific PIPs as well as other probabilities of interest (see our manuscript linked below). PIPSORT was designed to distinguish GWAS signals that are shared across ancestries versus ancestry-specific. The variants do not have to be matched across ancestries, meaning it can handle variants that were tested in one but not both studies.
 
 PIPSORT extends https://github.com/nlapier2/MsCAVIAR/
 
@@ -10,18 +10,39 @@ The majority of PIPSORT development was done on a fork. We have moved the code t
 
 ### Installation
 
+Prerequisites:
+- A recent version of C/C++ compiler supporting `C++11` standard
+- `CMake` version `3.16` or above
+
 Required libraries:
 - GNU scientific library (GSL)
 - BLAS and LAPACK
 - C++ compiler
 
+To compile:
+
 ```
 git clone https://github.com/CAST-genomics/pipsort.git
 cd pipsort/
+mkdir build
+cd build
+cmake ..
 make
 ```
 
+This will generate the `PIPSORT` binary in the `build/` directory.
+
+To install:
+
+```
+cmake --install . --prefix PREFIX
+```
+
+where `PREFIX` is a place you have write permissions. In most cases this will be your home directory, e.g. `$HOME`. If you install locally, make sure `$PREFIX/bin` is on your PATH.
+
 Installation notes: in our development, we used GCC version 10.2.0, GSL version 2.5, and OpenBLAS version 0.3.27. Compiling PIPSORT generally takes less than a minute.
+
+To test the install was successful, type `PIPSORT --help` which should show a help message.
 
 ### Quickstart
 
