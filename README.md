@@ -42,7 +42,7 @@ where `PREFIX` is a place you have write permissions. In most cases this will be
 
 Installation notes: in our development, we used GCC version 10.2.0, GSL version 2.5, and OpenBLAS version 0.3.27. Compiling PIPSORT generally takes less than a minute.
 
-To test the install was successful, type `PIPSORT --help` which should show a help message.
+To test the install was successful, type `PIPSORT -h` which should show a help message.
 
 ### Quickstart
 
