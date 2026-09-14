@@ -99,7 +99,7 @@ vector<vector<int>> PostCal::get_nbdzero(vector<int> curr_causal_locs) {
 }
 
 
-double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared) {
+double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_squared, int seed) {
     double sumLikelihood = 0;
     int mycount = 0;
     printf("num total configs = %d\n", mycount);
@@ -135,7 +135,7 @@ double PostCal::sss_computeTotalLikelihood(vector<double>* stat, double sigma_g_
  */
 
 
-    std::mt19937 gen(12345); //deterministic
+    std::mt19937 gen(seed); //deterministic
     
     int nP = omp_get_num_procs();
     //nP = 4;

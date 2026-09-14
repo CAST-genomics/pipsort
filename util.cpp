@@ -86,7 +86,7 @@ void printCharVec(vector<char> v) {
 void importData(string fileName, vector<double> *& vector) {
     ifstream file(fileName.c_str(), ifstream::in);
     if (!file) {
-        cout << "Unable to open file; This is why";
+        cerr << "Could not open " << fileName << endl;
         exit(1); // terminate with error
     }
 
